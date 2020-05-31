@@ -6,6 +6,7 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
     1. [Play Framework](#play-framework)
         1. [Provider](#provider)
         1. [Consumer](#consumer)
+1. [Examples]
 1. [Notes](#notes)
 
 ### Quick start
@@ -25,24 +26,26 @@ class UserInternalService extends UserService {
     }
 }
 ```
+Put library version in the build file:
+```scala
+val poppetVersion = "0.0.1.0-SNAPSHOT"
+```
 
 ### Play framework
 #### Provider
 Add play poppet provider dependency to the build file, let's assume you are using sbt:
 ```scala
-lazy val poppetVersion = "0.0.1.0-SNAPSHOT"
-libraryDependencies += Seq(
-  "com.github.yakivy" %% "poppet-provider-play" % poppetVersion,
-  "com.github.yakivy" %% "poppet-coder-play" % poppetVersion
-)
+libraryDependencies += "com.github.yakivy" %% "poppet-provider-play" % poppetVersion
 ```
 Create a provider for service, keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
 ```scala
+import cats.implicits._
 import poppet.provider.play.all._
 import poppet.coder.play.all._
-import play.api.mvc._
+import play.api.mvc.ControllerComponents
+import scala.concurrent.ExecutionContext
 
-def provider(cc: ControllerComponents) = Provider(
+def provider(cc: ControllerComponents)(implicit ec: ExecutionContext) = Provider(
     PlayServer(cc), PlayCoder())(
     ProviderProcessor(helloService).generate()
 )
@@ -57,13 +60,19 @@ POST /api/user @UserController.apply()
 import javax.inject.Inject
 import play.api.mvc._
 
-class UserController @Inject()(cc: ControllerComponents) extends AbstractController(cc) {
+class UserController @Inject()(
+    cc: ControllerComponents)(implicit ec: ExecutionContext
+) extends AbstractController(cc) {
     def apply() = provider(cc).materialize()
 }
 ```
 
 #### Consumer
 Development in progress...
+
+### Examples
+- Play Framework: https://github.com/yakivy/poppet/tree/master/example/play
+    - run provider: `sbt "; project playProviderExample; run 9001"`
 
 ### Notes
 Library is in active development and initial version is not completed yet.
