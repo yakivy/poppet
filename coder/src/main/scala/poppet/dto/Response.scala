@@ -1,3 +1,3 @@
 package poppet.dto
 
-case class Response[I](value: I, context: I)
+case class Response[I](value: I)

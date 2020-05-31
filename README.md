@@ -1,6 +1,13 @@
 ## Poppet
 Poppet is a functional, extensible, type-based Scala library for generating RPC services from pure service traits.
 
+### Table of contents
+1. [Quick start](#quick-start)
+    1. [Play Framework](#play-framework)
+        1. [Provider](#provider)
+        1. [Consumer](#consumer)
+1. [Notes](#notes)
+
 ### Quick start
 Define service API and share it between provider and consumer services:
 ```scala
@@ -19,7 +26,8 @@ class UserInternalService extends UserService {
 }
 ```
 
-### Play framework provider
+### Play framework
+#### Provider
 Add play poppet provider dependency to the build file, let's assume you are using sbt:
 ```scala
 lazy val poppetVersion = "0.0.1.0-SNAPSHOT"
@@ -32,10 +40,11 @@ Create a provider for service, keep in mind that only abstract methods of the se
 ```scala
 import poppet.provider.play.all._
 import poppet.coder.play.all._
+import play.api.mvc._
 
-val provider = Provider(
-    PlayServer())(
-    ProviderProcessor[UserService](new UserInternalService)
+def provider(cc: ControllerComponents) = Provider(
+    PlayServer(cc), PlayCoder())(
+    ProviderProcessor(helloService).generate()
 )
 ```
 Materialize and register provider:  
@@ -49,9 +58,12 @@ import javax.inject.Inject
 import play.api.mvc._
 
 class UserController @Inject()(cc: ControllerComponents) extends AbstractController(cc) {
-    def apply() = provider.materialize()
+    def apply() = provider(cc).materialize()
 }
 ```
+
+#### Consumer
+Development in progress...
 
 ### Notes
 Library is in active development and initial version is not completed yet.

@@ -1,9 +1,9 @@
 package poppet.provider
 
-import poppet.coder.BiCoder
+import poppet.coder.ExchangeCoder
 import poppet.dto.Request
 import poppet.dto.Response
 
 trait Server[A, F[_], M] {
-    def materialize[I](coder: BiCoder[A, I, F])(f: Request[I] => Response[I]): M
+    def materialize[I](coder: ExchangeCoder[A, I, F])(f: Request[I] => F[Response[I]]): M
 }
