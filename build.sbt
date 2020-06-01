@@ -51,8 +51,11 @@ lazy val root = project.in(file("."))
     .settings(publishingSettings: _*)
     .settings(publish / skip := true)
     .aggregate(
+        coder,
         playCoder,
+        provider,
         playProvider,
+        consumer,
         playConsumer
     )
 
