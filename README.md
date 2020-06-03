@@ -28,7 +28,7 @@ class UserInternalService extends UserService {
 ```
 Put library version in the build file:
 ```scala
-val poppetVersion = "0.0.1.0-SNAPSHOT"
+val poppetVersion = "0.0.1.1-SNAPSHOT"
 ```
 
 ### Play framework
