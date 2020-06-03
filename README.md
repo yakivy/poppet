@@ -33,9 +33,12 @@ val poppetVersion = "0.0.1.0-SNAPSHOT"
 
 ### Play framework
 #### Provider
-Add play poppet provider dependency to the build file, let's assume you are using sbt:
+Add play poppet coder and provider dependencies to the build file, let's assume you are using sbt:
 ```scala
-libraryDependencies += "com.github.yakivy" %% "poppet-provider-play" % poppetVersion
+libraryDependencies += Seq(
+    "com.github.yakivy" %% "poppet-coder-play" % poppetVersion,
+    "com.github.yakivy" %% "poppet-provider-play" % poppetVersion
+)
 ```
 Create a provider for service, keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
 ```scala
