@@ -5,7 +5,13 @@ import cats.implicits._
 import poppet.coder.ExchangeCoder
 import poppet.dto.Response
 
-case class Provider[A, I, F[_] : Functor, M](
+/**
+ * @tparam A - server data type, for example Array[Byte]
+ * @tparam I - intermediate data type, for example Json
+ * @tparam F - service data kind, for example Future[_]
+ * @tparam M - materialized data type, for example Action
+ */
+class Provider[A, I, F[_] : Functor, M](
     server: Server[A, F, M], coder: ExchangeCoder[A, I, F])(
     processors: ProviderProcessor[I, F]
 ) {
@@ -28,4 +34,10 @@ case class Provider[A, I, F[_] : Functor, M](
             .f(r.arguments)
             .map(result => Response(result))
     }
+}
+
+object Provider {
+    def apply[A, I, F[_] : Functor, M](
+        server: Server[A, F, M], coder: ExchangeCoder[A, I, F])(processors: ProviderProcessor[I, F]
+    ): Provider[A, I, F, M] = new Provider(server, coder)(processors)
 }

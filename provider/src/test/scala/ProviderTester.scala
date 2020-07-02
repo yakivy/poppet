@@ -4,7 +4,7 @@ import poppet.provider.ProviderProcessor
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 
-object Tester {
+object ProviderTester {
     trait A {
         def a0: Int
         def a1(): Int

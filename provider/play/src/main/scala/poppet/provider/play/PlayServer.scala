@@ -19,10 +19,10 @@ case class PlayServer(
     override def materialize[I](
         coder: ExchangeCoder[Array[Byte], I, Future])(f: dto.Request[I] => Future[dto.Response[I]]
     ): Action[ByteString] = actionBuilder.async(request => for {
-        request <- coder.request(
+        request <- coder.drequest(
             request.body.toByteBuffer.array()
         )
         result <- f(request)
-        response <- coder.response(result)
+        response <- coder.eresponse(result)
     } yield Results.Ok(response))
 }

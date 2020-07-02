@@ -1,1 +1,1 @@
-POST        /service        controller.ProviderController.apply()
+POST        /api/service        controller.ProviderController.apply()

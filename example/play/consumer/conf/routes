@@ -1,0 +1,1 @@
+GET        /api/user/:id        controller.UserController.findById(id)

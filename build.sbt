@@ -6,10 +6,6 @@ lazy val versions = new {
     val play = "2.8.1"
 }
 
-scalacOptions ++= Seq(
-    "-Ymacro-debug-lite"
-)
-
 lazy val commonSettings = Seq(
     organization := "com.github.yakivy",
     scmInfo := Some(ScmInfo(
@@ -83,32 +79,39 @@ lazy val playCoder = project.in(file("coder/play"))
     .settings(name := "poppet-coder-play")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
-    .dependsOn(coder % "compile->compile;test->test")
+    .settings(commonDependencies: _*)
     .settings(Seq(
         libraryDependencies ++= Seq(
             "com.typesafe.play" %% "play-json" % versions.play % "test,provided",
         )
     ))
+    .dependsOn(coder % "compile->compile;test->test")
 
 lazy val playProvider = project.in(file("provider/play"))
     .settings(name := "poppet-provider-play")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
-    .dependsOn(provider % "compile->compile;test->test")
     .settings(libraryDependencies ++= Seq(
         "com.typesafe.play" %% "play" % versions.play % "test,provided",
     ))
+    .dependsOn(provider % "compile->compile;test->test")
 
 lazy val playConsumer = project.in(file("consumer/play"))
     .settings(name := "poppet-consumer-play")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
+    .settings(libraryDependencies ++= Seq(
+        "com.typesafe.play" %% "play-ws" % versions.play % "test,provided",
+    ))
     .dependsOn(consumer % "compile->compile;test->test")
 
 lazy val playApiExample = project.in(file("example/play/api"))
     .settings(name := "poppet-api-play-example")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
+    .settings(libraryDependencies ++= Seq(
+        "com.typesafe.play" %% "play-json" % versions.play,
+    ))
     .settings(publish / skip := true)
 
 lazy val playProviderExample = project.in(file("example/play/provider"))
@@ -124,3 +127,17 @@ lazy val playProviderExample = project.in(file("example/play/provider"))
         guice
     ))
     .dependsOn(playCoder, playProvider, playApiExample)
+
+lazy val playConsumerExample = project.in(file("example/play/consumer"))
+    .enablePlugins(PlayScala)
+    .settings(name := "poppet-consumer-play-example")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(publish / skip := true)
+    .settings(libraryDependencies ++= Seq(
+        "org.typelevel" %% "cats-core" % versions.cats
+    ))
+    .settings(libraryDependencies ++= Seq(
+        guice, ws
+    ))
+    .dependsOn(playCoder, playConsumer, playApiExample)

@@ -12,10 +12,14 @@ import poppet.dto.Response
 import scala.concurrent.Future
 
 case class PlayCoder() extends ExchangeCoder[Array[Byte], JsValue, Future] {
-    override def request: Coder[Array[Byte], Future[Request[JsValue]]] =
-        r => Future.successful(bytesToJsonCoder(r).as[Request[JsValue]])
-    override def response: Coder[Response[JsValue], Future[Array[Byte]]] =
-        r => Future.successful(jsonToBytesCoder(Json.toJson(r)))
+    val drequest: Coder[Array[Byte], Future[Request[JsValue]]] =
+        coderToFutureCoder(readsToCoder(RqF).compose(bytesToJsonCoder))
+    val erequest: Coder[Request[JsValue], Future[Array[Byte]]] =
+        coderToFutureCoder(jsonToBytesCoder.compose(writesToCoder(RqF)))
+    val dresponse: Coder[Array[Byte], Future[Response[JsValue]]] =
+        coderToFutureCoder(readsToCoder(RsF).compose(bytesToJsonCoder))
+    val eresponse: Coder[Response[JsValue], Future[Array[Byte]]] =
+        coderToFutureCoder(jsonToBytesCoder.compose(writesToCoder(RsF)))
 }
 
 object PlayCoder {
