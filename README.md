@@ -6,6 +6,7 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
     1. [Play Framework](#play-framework)
         1. [Provider](#provider)
         1. [Consumer](#consumer)
+    1. [Http4s](#http4s)
     1. [Spring Framework](#spring-framework)
 1. [Error handling](#error-handling)
 1. [Examples](#examples)
@@ -112,7 +113,10 @@ class UserController @Inject()(
 }
 ```
 
-#### Spring framework
+### Http4s
+Development in progress...
+
+### Spring framework
 Java island in Scala world :)  
 Development in progress...
 
