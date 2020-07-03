@@ -1,5 +1,6 @@
 package poppet.coder.jackson.instances
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -13,6 +14,7 @@ trait LpJacksonCoderInstances {
     implicit val om: ObjectMapper = {
         val om = new ObjectMapper() with ScalaObjectMapper
         om.registerModule(DefaultScalaModule)
+        om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         om
     }
 
