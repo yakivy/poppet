@@ -19,7 +19,7 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
 ### Quick start
 Put library version in the build file:
 ```scala
-val poppetVersion = "0.0.1.2-SNAPSHOT"
+val poppetVersion = "0.0.1.3-SNAPSHOT"
 ```
 
 ### Play framework
