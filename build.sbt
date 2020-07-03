@@ -55,6 +55,7 @@ lazy val root = project.in(file("."))
         playCoder,
         provider,
         playProvider,
+        springProvider,
         consumer,
         playConsumer,
         springConsumer
