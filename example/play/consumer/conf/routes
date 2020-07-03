@@ -1,1 +1,1 @@
-GET        /api/user/:id        controller.UserController.findById(id)
+GET        /api/user/:id        poppet.example.play.controller.UserController.findById(id)

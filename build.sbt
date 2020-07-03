@@ -4,6 +4,9 @@ lazy val versions = new {
     val cats = "2.0.0"
     val scalatest = "3.0.8"
     val play = "2.8.1"
+    val jackson = "2.11.1"
+    val spring = "5.2.7.RELEASE"
+    val springBoot = "2.3.1.RELEASE"
 }
 
 lazy val commonSettings = Seq(
@@ -48,11 +51,13 @@ lazy val root = project.in(file("."))
     .settings(publish / skip := true)
     .aggregate(
         coder,
+        jacksonCoder,
         playCoder,
         provider,
         playProvider,
         consumer,
-        playConsumer
+        playConsumer,
+        springConsumer
     )
 
 lazy val coder = project.in(file("coder"))
@@ -61,18 +66,15 @@ lazy val coder = project.in(file("coder"))
     .settings(publishingSettings: _*)
     .settings(commonDependencies: _*)
 
-lazy val provider = project.in(file("provider"))
-    .settings(name := "poppet-provider")
+lazy val jacksonCoder = project.in(file("coder/jackson"))
+    .settings(name := "poppet-coder-jackson")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
     .settings(commonDependencies: _*)
-    .dependsOn(coder % "compile->compile;test->test")
-
-lazy val consumer = project.in(file("consumer"))
-    .settings(name := "poppet-consumer")
-    .settings(commonSettings: _*)
-    .settings(publishingSettings: _*)
-    .settings(commonDependencies: _*)
+    .settings(libraryDependencies ++= Seq(
+        "com.fasterxml.jackson.core" % "jackson-databind" % versions.jackson % "test,provided",
+        "com.fasterxml.jackson.module" %% "jackson-module-scala" % versions.jackson % "test,provided",
+    ))
     .dependsOn(coder % "compile->compile;test->test")
 
 lazy val playCoder = project.in(file("coder/play"))
@@ -80,11 +82,16 @@ lazy val playCoder = project.in(file("coder/play"))
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
     .settings(commonDependencies: _*)
-    .settings(Seq(
-        libraryDependencies ++= Seq(
-            "com.typesafe.play" %% "play-json" % versions.play % "test,provided",
-        )
+    .settings(libraryDependencies ++= Seq(
+        "com.typesafe.play" %% "play-json" % versions.play % "test,provided",
     ))
+    .dependsOn(coder % "compile->compile;test->test")
+
+lazy val provider = project.in(file("provider"))
+    .settings(name := "poppet-provider")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(commonDependencies: _*)
     .dependsOn(coder % "compile->compile;test->test")
 
 lazy val playProvider = project.in(file("provider/play"))
@@ -96,12 +103,39 @@ lazy val playProvider = project.in(file("provider/play"))
     ))
     .dependsOn(provider % "compile->compile;test->test")
 
+lazy val springProvider = project.in(file("provider/spring"))
+    .settings(name := "poppet-provider-spring")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(commonDependencies: _*)
+    .settings(libraryDependencies ++= Seq(
+        "org.springframework" % "spring-web" % versions.spring % "test,provided",
+    ))
+    .dependsOn(provider % "compile->compile;test->test")
+
+lazy val consumer = project.in(file("consumer"))
+    .settings(name := "poppet-consumer")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(commonDependencies: _*)
+    .dependsOn(coder % "compile->compile;test->test")
+
 lazy val playConsumer = project.in(file("consumer/play"))
     .settings(name := "poppet-consumer-play")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
     .settings(libraryDependencies ++= Seq(
         "com.typesafe.play" %% "play-ws" % versions.play % "test,provided",
+    ))
+    .dependsOn(consumer % "compile->compile;test->test")
+
+lazy val springConsumer = project.in(file("consumer/spring"))
+    .settings(name := "poppet-consumer-spring")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(commonDependencies: _*)
+    .settings(libraryDependencies ++= Seq(
+        "org.springframework" % "spring-web" % versions.spring % "test,provided",
     ))
     .dependsOn(consumer % "compile->compile;test->test")
 
@@ -121,9 +155,7 @@ lazy val playProviderExample = project.in(file("example/play/provider"))
     .settings(publishingSettings: _*)
     .settings(publish / skip := true)
     .settings(libraryDependencies ++= Seq(
-        "org.typelevel" %% "cats-core" % versions.cats
-    ))
-    .settings(libraryDependencies ++= Seq(
+        "org.typelevel" %% "cats-core" % versions.cats,
         guice
     ))
     .dependsOn(playCoder, playProvider, playApiExample)
@@ -135,9 +167,38 @@ lazy val playConsumerExample = project.in(file("example/play/consumer"))
     .settings(publishingSettings: _*)
     .settings(publish / skip := true)
     .settings(libraryDependencies ++= Seq(
-        "org.typelevel" %% "cats-core" % versions.cats
-    ))
-    .settings(libraryDependencies ++= Seq(
+        "org.typelevel" %% "cats-core" % versions.cats,
         guice, ws
     ))
     .dependsOn(playCoder, playConsumer, playApiExample)
+
+lazy val springApiExample = project.in(file("example/spring/api"))
+    .settings(name := "poppet-api-spring-example")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(publish / skip := true)
+
+lazy val springProviderExample = project.in(file("example/spring/provider"))
+    .settings(name := "poppet-provider-spring-example")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(publish / skip := true)
+    .settings(libraryDependencies ++= Seq(
+        "org.typelevel" %% "cats-core" % versions.cats,
+        "com.fasterxml.jackson.module" %% "jackson-module-scala" % versions.jackson,
+        "org.springframework.boot" % "spring-boot-starter-web" % versions.springBoot
+    ))
+    .dependsOn(jacksonCoder, springProvider, springApiExample)
+
+lazy val springConsumerExample = project.in(file("example/spring/consumer"))
+    .settings(name := "poppet-consumer-spring-example")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(publish / skip := true)
+    .settings(libraryDependencies ++= Seq(
+        "org.typelevel" %% "cats-core" % versions.cats,
+        "com.fasterxml.jackson.module" %% "jackson-module-scala" % versions.jackson,
+        "org.springframework.boot" % "spring-boot-starter-web" % versions.springBoot
+    ))
+    .settings(mainClass in Compile := Some("poppet.example.spring.Application"))
+    .dependsOn(jacksonCoder, springConsumer, springApiExample)
