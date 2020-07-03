@@ -38,7 +38,7 @@ object ConsumerProcessor {
                         q"""$fmonad.flatMap(${codedArgument(h)})((${Ident(h.name)}: ${h.typeSignature}) => $tree)"""
                     case hs => q"""$fmonad.flatten(
                         _root_.cats.Semigroupal.${TermName("map" + hs.size)}(..${hs.map(codedArgument)})(
-                            ..${hs.map(h => q"${Ident(h.name)}: ${h.typeSignature}")} => $tree
+                            ..${hs.map(h => q"${Ident(h.name)}: $itype")} => $tree
                         )
                     )"""
                 }
