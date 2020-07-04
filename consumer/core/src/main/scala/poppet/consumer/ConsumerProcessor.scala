@@ -28,7 +28,7 @@ object ConsumerProcessor {
             .map(_.asMethod)
             .map { m =>
                 val methodName = m.name
-                val arguments = m.paramLists.map(ps => ps.map(p => internal.valDef(p)))
+                val arguments = m.paramLists.map(ps => ps.map(p => q"${Ident(p.name)}: ${p.typeSignature}"))
                 val codedArgument: c.universe.Symbol => Tree = a => q"""implicitly[
                     _root_.poppet.coder.Coder[${a.typeSignature},${appliedType(ftype, itype)}]
                 ].apply(${Ident(a.name)})"""

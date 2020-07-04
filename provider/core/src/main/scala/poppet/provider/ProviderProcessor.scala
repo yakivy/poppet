@@ -6,7 +6,7 @@ import scala.reflect.macros.blackbox
 class ProviderProcessor[I, F[_]](val service: String, val methods: List[MethodProcessor[I, F]])
 
 class MethodProcessor[I, F[_]](
-    val name: String, val arguments: Set[String], val f: Map[String, I] => F[I]
+    val name: String, val arguments: List[String], val f: Map[String, I] => F[I]
 )
 
 object ProviderProcessor {
@@ -46,7 +46,7 @@ object ProviderProcessor {
                 val groupedArguments = m.paramLists.map(pl => pl.map(p => Ident(p.name)))
                 q"""new _root_.poppet.provider.MethodProcessor[$itype, $ftype](
                     ${m.name.toString},
-                    _root_.scala.Predef.Set(..$argumentNames),
+                    _root_.scala.List(..$argumentNames),
                     as => ${withCodedArguments(q"""
                         implicitly[_root_.poppet.coder.Coder[${m.returnType},${appliedType(ftype, itype)}]].apply(${
                         groupedArguments.foldLeft[Tree](

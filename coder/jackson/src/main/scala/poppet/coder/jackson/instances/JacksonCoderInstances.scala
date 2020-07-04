@@ -14,7 +14,7 @@ trait LpJacksonCoderInstances {
     implicit val om: ObjectMapper = {
         val om = new ObjectMapper() with ScalaObjectMapper
         om.registerModule(DefaultScalaModule)
-        om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         om
     }
 

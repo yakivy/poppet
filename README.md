@@ -17,9 +17,13 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
 1. [Notes](#notes)
 
 ### Quick start
-Put library version in the build file:
+Put library version in the build file and add cats dependency, let's assume you are using sbt:
 ```scala
 val poppetVersion = "0.0.1.5-SNAPSHOT"
+
+libraryDependencies += Seq(
+    "org.typelevel" %% "cats-core" % catsVersion
+)
 ```
 
 ### Play framework
@@ -45,7 +49,7 @@ class UserInternalService extends UserService {
     }
 }
 ```
-Add play poppet coder and provider dependencies to the build file, let's assume you are using sbt:
+Add play poppet coder and provider dependencies to the build file
 ```scala
 libraryDependencies += Seq(
     "com.github.yakivy" %% "poppet-coder-play" % poppetVersion,
@@ -79,11 +83,12 @@ class ProviderController @Inject()(
 ```
 
 #### Consumer
-Add play poppet coder and consumer dependencies to the build file:
+Add play coder and consumer dependencies to the build file, as play consumer is built on play WsClient we will also need it:
 ```scala
 libraryDependencies += Seq(
     "com.github.yakivy" %% "poppet-coder-play" % poppetVersion,
-    "com.github.yakivy" %% "poppet-consumer-play" % poppetVersion
+    "com.github.yakivy" %% "poppet-consumer-play" % poppetVersion,
+    ws
 )
 ```
 Create and materialize consumer for service (can be materialized once and shared everywhere):
@@ -164,11 +169,12 @@ public class UserInternalService implements UserService {
     }
 }
 ```
-Add spring poppet coder and provider dependencies to the build file, let's assume you are using sbt:
+Add spring coder and provider dependencies to the build file, as jackson coder doesn't work with scala classes out of the box we will also need to include jackson scala module:
 ```scala
 libraryDependencies += Seq(
     "com.github.yakivy" %% "poppet-coder-jackson" % poppetVersion,
-    "com.github.yakivy" %% "poppet-provider-spring" % poppetVersion
+    "com.github.yakivy" %% "poppet-provider-spring" % poppetVersion,
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
 )
 ```
 Create separate scala provider generator, keep in mind that only abstract methods of the service type will be exposed:
@@ -206,11 +212,12 @@ public class ProviderController {
 ```
 
 #### Consumer
-Add spring poppet coder and consumer dependencies to the build file:
+Add spring coder and consumer dependencies to the build file:
 ```scala
 libraryDependencies += Seq(
     "com.github.yakivy" %% "poppet-coder-jackson" % poppetVersion,
-    "com.github.yakivy" %% "poppet-consumer-spring" % poppetVersion
+    "com.github.yakivy" %% "poppet-consumer-spring" % poppetVersion,
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVersion
 )
 ```
 Create separate scala consumer generator (can be materialized once and shared everywhere):
