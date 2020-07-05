@@ -1,5 +1,5 @@
 lazy val versions = new {
-    val scala213 = "2.13.1"
+    val scala213 = "2.13.3"
     val scala212 = "2.12.10"
     val cats = "2.0.0"
     val scalatest = "3.0.8"
@@ -52,12 +52,12 @@ lazy val root = project.in(file("."))
     .aggregate(
         coder,
         jacksonCoder,
-        playCoder,
+        playJsonCoder,
         provider,
         playProvider,
         springProvider,
         consumer,
-        playConsumer,
+        playWsConsumer,
         springConsumer
     )
 
@@ -78,8 +78,8 @@ lazy val jacksonCoder = project.in(file("coder/jackson"))
     ))
     .dependsOn(coder % "compile->compile;test->test")
 
-lazy val playCoder = project.in(file("coder/play"))
-    .settings(name := "poppet-coder-play")
+lazy val playJsonCoder = project.in(file("coder/play-json"))
+    .settings(name := "poppet-coder-play-json")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
     .settings(commonDependencies: _*)
@@ -121,8 +121,8 @@ lazy val consumer = project.in(file("consumer/core"))
     .settings(commonDependencies: _*)
     .dependsOn(coder % "compile->compile;test->test")
 
-lazy val playConsumer = project.in(file("consumer/play"))
-    .settings(name := "poppet-consumer-play")
+lazy val playWsConsumer = project.in(file("consumer/play-ws"))
+    .settings(name := "poppet-consumer-play-ws")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
     .settings(libraryDependencies ++= Seq(
@@ -159,7 +159,7 @@ lazy val playProviderExample = project.in(file("example/play/provider"))
         "org.typelevel" %% "cats-core" % versions.cats,
         guice
     ))
-    .dependsOn(playCoder, playProvider, playApiExample)
+    .dependsOn(playJsonCoder, playProvider, playApiExample)
 
 lazy val playConsumerExample = project.in(file("example/play/consumer"))
     .enablePlugins(PlayScala)
@@ -171,7 +171,7 @@ lazy val playConsumerExample = project.in(file("example/play/consumer"))
         "org.typelevel" %% "cats-core" % versions.cats,
         guice, ws
     ))
-    .dependsOn(playCoder, playConsumer, playApiExample)
+    .dependsOn(playJsonCoder, playWsConsumer, playApiExample)
 
 lazy val springApiExample = project.in(file("example/spring/api"))
     .settings(name := "poppet-api-spring-example")
@@ -189,6 +189,7 @@ lazy val springProviderExample = project.in(file("example/spring/provider"))
         "com.fasterxml.jackson.module" %% "jackson-module-scala" % versions.jackson,
         "org.springframework.boot" % "spring-boot-starter-web" % versions.springBoot
     ))
+    .settings(mainClass in Compile := Some("poppet.example.spring.Application"))
     .dependsOn(jacksonCoder, springProvider, springApiExample)
 
 lazy val springConsumerExample = project.in(file("example/spring/consumer"))

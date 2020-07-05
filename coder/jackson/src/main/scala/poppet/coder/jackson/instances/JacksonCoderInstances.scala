@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.ScalaObjectMapper
 import poppet.coder.Coder
+import poppet.coder.instances.CoderInstances
 import poppet.coder.jackson.instances.JacksonCoderInstances._
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
@@ -23,12 +24,7 @@ trait LpJacksonCoderInstances {
     implicit def jsonToAnyCoder[A](implicit om: ObjectMapper): Coder[JsonNode, A] = macro jsonToAnyCoderImpl[A]
 }
 
-trait JacksonCoderInstances extends LpJacksonCoderInstances {
-    implicit def bytesToJsonCoder(implicit om: ObjectMapper): Coder[Array[Byte], JsonNode] =
-        a => om.readTree(a)
-    implicit def jsonToBytesCoder(implicit om: ObjectMapper): Coder[JsonNode, Array[Byte]] =
-        a => om.writeValueAsBytes(a)
-}
+trait JacksonCoderInstances extends CoderInstances with LpJacksonCoderInstances
 
 object JacksonCoderInstances {
     def jsonToAnyCoderImpl[A](

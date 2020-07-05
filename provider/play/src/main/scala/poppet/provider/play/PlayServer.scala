@@ -4,25 +4,24 @@ import akka.util.ByteString
 import play.api.mvc.Action
 import play.api.mvc.ActionBuilderImpl
 import play.api.mvc.ControllerComponents
+import play.api.mvc.Request
+import play.api.mvc.Result
 import play.api.mvc.Results
-import poppet.coder.ExchangeCoder
-import poppet.dto
 import poppet.provider.Server
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 case class PlayServer(
     cc: ControllerComponents)(implicit ec: ExecutionContext
-) extends Server[Array[Byte], Future, Action[ByteString]] {
+) extends Server[Array[Byte], Future, Request[ByteString], Result, Action[ByteString]] {
     private val actionBuilder = new ActionBuilderImpl(cc.parsers.byteString)
 
-    override def materialize[I](
-        coder: ExchangeCoder[Array[Byte], I, Future])(f: dto.Request[I] => Future[dto.Response[I]]
-    ): Action[ByteString] = actionBuilder.async(request => for {
-        request <- coder.drequest(
-            request.body.toByteBuffer.array()
-        )
-        result <- f(request)
-        response <- coder.eresponse(result)
-    } yield Results.Ok(response))
+    override def buildRequest(request: Request[ByteString]): Future[Array[Byte]] =
+        Future.successful(request.body.toByteBuffer.array())
+
+    override def buildResponse(response: Array[Byte]): Future[Result] =
+        Future.successful(Results.Ok(response))
+
+    override def materialize(f: Request[ByteString] => Future[Result]): Action[ByteString] =
+        actionBuilder.async(f)
 }

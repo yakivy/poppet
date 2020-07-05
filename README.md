@@ -1,4 +1,11 @@
 ## Poppet
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.yakivy/poppet-coder-core_2.13.svg)](https://mvnrepository.com/search?q=poppet)
+[![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/https/oss.sonatype.org/com.github.yakivy/poppet-coder-core_2.13.svg)](https://oss.sonatype.org/content/repositories/snapshots/com/github/yakivy/poppet-coder-core_2.13/)
+[![Build Status](https://travis-ci.com/yakivy/poppet.svg?branch=master)](https://travis-ci.com/yakivy/poppet)
+[![codecov.io](https://codecov.io/gh/yakivy/dupin/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/github/yakivy/poppet/branch/master)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<a href="https://typelevel.org/cats/"><img src="https://typelevel.org/cats/img/cats-badge.svg" height="40px" align="right" alt="Cats friendly" /></a>
+
 Poppet is a functional, extensible, type-based Scala library for generating RPC services from pure service traits.
 
 ### Table of contents
@@ -12,6 +19,7 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
         1. [API](#api-1)
         1. [Provider](#provider-1)
         1. [Consumer](#consumer-1)
+1. [Decorators](#decorators)
 1. [Error handling](#error-handling)
 1. [Examples](#examples)
 1. [Notes](#notes)
@@ -63,7 +71,8 @@ import poppet.provider.play.all._
 import poppet.coder.play.all._
 
 def provider(cc: ControllerComponents)(implicit ec: ExecutionContext) = Provider(
-    PlayServer(cc), PlayCoder())(
+    PlayServer(cc))(
+    PlayCoder())(
     ProviderProcessor[UserService](new UserInternalService).generate()
 )
 ```
@@ -98,7 +107,7 @@ import poppet.coder.play.all._
 import poppet.consumer.play.all._
 
 def userService(wsClient: WSClient)(implicit ec: ExecutionContext): UserService = Consumer(
-   PlayClient(s"http://${providerHostName}/api/service")(wsClient),
+   PlayClient(s"http://${providerHostName}/api/service")(wsClient))(
    PlayCoder())(
    ConsumerProcessor[UserService].generate()
 ).materialize()
@@ -185,13 +194,11 @@ import poppet.provider.spring.all._
 object ProviderGenerator {
     def apply(
         userService: UserService
-    ): RequestEntity[Array[Byte]] => ResponseEntity[Array[Byte]] = {
-        Provider(
-            SpringServer(),
-            JacksonCoder())(
-            ProviderProcessor(userService).generate()
-        ).materialize()
-    }
+    ): RequestEntity[Array[Byte]] => ResponseEntity[Array[Byte]] = Provider(
+        SpringServer())(
+        JacksonCoder())(
+        ProviderProcessor(userService).generate()
+    ).materialize()
 }
 ```
 Register provider:  
@@ -227,7 +234,7 @@ import poppet.consumer.spring.all._
 
 object ConsumerGenerator {
     def userService(restTemplate: RestTemplate): UserService = Consumer(
-        SpringClient(s"http://${providerHostName}:9001/api/service")(restTemplate),
+        SpringClient(s"http://${providerHostName}:9001/api/service")(restTemplate))(
         JacksonCoder())(
         ConsumerProcessor[UserService].generate()
     ).materialize()
@@ -248,6 +255,47 @@ public class UserController {
         return userService.findById(id);
     }
 }
+```
+
+### Decorators
+Let's say you want to add simple auth for generated RPC endpoints, you can easily do it with help of decorators. Decorator is an alias for scala function that receives poppet flow as an input and returns decorated flow of the same type.  
+Firstly we need to define header where we want to pass the secret and the secret by itself:
+```scala
+val authHeader = "auth"
+val authSecret = "my-secret"
+```
+Then we can create client decorator that will add auth header in all client requests (example is for `play-ws` consumer):
+```scala
+val consumerAuthDecorator = new Decorator[WSRequest, WSResponse, Future] {
+    override def apply(chain: WSRequest => Future[WSResponse]): WSRequest => Future[WSResponse] =
+        ((_: WSRequest).addHttpHeaders(authHeader -> authSecret)).andThen(chain)
+}
+```
+register it in the consumer:
+```scala
+Consumer(
+    PlayWsClient(providerUrl)(wsClient), List(authDecorator))(
+    PlayJsonCoder())(
+    ConsumerProcessor[UserService].generate()
+).materialize()
+```
+And finally check if auth header is present in all server requests with server decorator:
+```scala
+val producerAuthDecorator = new Decorator[Request[ByteString], Result, Future] {
+    override def apply(chain: Request[ByteString] => Future[Result]): Request[ByteString] => Future[Result] =
+        ((rq: Request[ByteString]) => {
+            if (!rq.headers.get(authHeader).contains(authSecret))
+                throw new IllegalArgumentException("Wrong secret!")
+            else rq
+        }).andThen(chain)
+}
+```
+```scala
+Provider(
+    PlayServer(cc), List(producerAuthDecorator))(
+    PlayJsonCoder())(
+    ProviderProcessor(helloService).generate()
+).materialize()
 ```
 
 ### Error handling

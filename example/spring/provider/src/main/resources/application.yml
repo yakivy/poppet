@@ -1,2 +1,6 @@
 server:
   port: 9001
+
+auth:
+  header: "auth"
+  secret: "my-secret"

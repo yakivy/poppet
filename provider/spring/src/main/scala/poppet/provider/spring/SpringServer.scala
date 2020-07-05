@@ -4,17 +4,18 @@ import cats.Id
 import org.springframework.http.HttpStatus
 import org.springframework.http.RequestEntity
 import org.springframework.http.ResponseEntity
-import poppet.coder.ExchangeCoder
-import poppet.dto
 import poppet.provider.Server
 
-case class SpringServer()
-    extends Server[Array[Byte], Id, RequestEntity[Array[Byte]] => ResponseEntity[Array[Byte]]] {
-    override def materialize[I](
-        coder: ExchangeCoder[Array[Byte], I, Id])(f: dto.Request[I] => Id[dto.Response[I]]
-    ): RequestEntity[Array[Byte]] => ResponseEntity[Array[Byte]] = request => {
-        val erequest = coder.drequest(request.getBody)
-        val result = f(erequest)
-        new ResponseEntity(coder.eresponse(result), HttpStatus.OK)
-    }
+case class SpringServer() extends Server[
+    Array[Byte], Id, RequestEntity[Array[Byte]], ResponseEntity[Array[Byte]],
+    RequestEntity[Array[Byte]] => ResponseEntity[Array[Byte]]
+] {
+    override def buildRequest(request: RequestEntity[Array[Byte]]): Id[Array[Byte]] = request.getBody
+
+    override def buildResponse(response: Array[Byte]): Id[ResponseEntity[Array[Byte]]] =
+        new ResponseEntity(response, HttpStatus.OK)
+
+    override def materialize(
+        f: RequestEntity[Array[Byte]] => Id[ResponseEntity[Array[Byte]]]
+    ): RequestEntity[Array[Byte]] => ResponseEntity[Array[Byte]] = f
 }

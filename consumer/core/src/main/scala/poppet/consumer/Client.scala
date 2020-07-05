@@ -1,9 +1,7 @@
 package poppet.consumer
 
-import poppet.coder.ExchangeCoder
-import poppet.dto.Request
-import poppet.dto.Response
-
-trait Client[A, F[_]] {
-    def materialize[I](coder: ExchangeCoder[A, I, F]): Request[I] => F[Response[I]]
+trait Client[A, F[_], RQ, RS] {
+    def buildRequest(request: A): F[RQ]
+    def buildResponse(response: RS): F[A]
+    def execute(request: RQ): F[RS]
 }

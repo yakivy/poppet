@@ -1,2 +1,9 @@
 server:
   port: 9002
+
+auth:
+  header: "auth"
+  secret: "my-secret"
+
+consumer:
+  url: "http://localhost:9001/api/service"

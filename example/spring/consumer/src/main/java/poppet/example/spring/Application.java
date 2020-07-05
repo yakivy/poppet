@@ -1,5 +1,6 @@
 package poppet.example.spring;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +20,12 @@ public class Application {
     }
 
     @Bean
-    public UserService userService(RestTemplate restTemplate) {
-        return ConsumerGenerator.userService(restTemplate);
+    public UserService userService(
+        RestTemplate restTemplate,
+        @Value("${consumer.url}") String url,
+        @Value("${auth.header}") String authHeader,
+        @Value("${auth.secret}") String authSecret
+    ) {
+        return ConsumerGenerator.userService(restTemplate, url, authHeader, authSecret);
     }
 }
