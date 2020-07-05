@@ -2,7 +2,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.yakivy/poppet-coder-core_2.13.svg)](https://mvnrepository.com/search?q=poppet)
 [![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/https/oss.sonatype.org/com.github.yakivy/poppet-coder-core_2.13.svg)](https://oss.sonatype.org/content/repositories/snapshots/com/github/yakivy/poppet-coder-core_2.13/)
 [![Build Status](https://travis-ci.com/yakivy/poppet.svg?branch=master)](https://travis-ci.com/yakivy/poppet)
-[![codecov.io](https://codecov.io/gh/yakivy/dupin/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/github/yakivy/poppet/branch/master)
+[![codecov.io](https://codecov.io/gh/yakivy/poppet/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/github/yakivy/poppet/branch/master)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 <a href="https://typelevel.org/cats/"><img src="https://typelevel.org/cats/img/cats-badge.svg" height="40px" align="right" alt="Cats friendly" /></a>
 
@@ -27,7 +27,7 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
 ### Quick start
 Put library version in the build file and add cats dependency, let's assume you are using sbt:
 ```scala
-val poppetVersion = "0.0.1.5-SNAPSHOT"
+val poppetVersion = "0.0.1.6-SNAPSHOT"
 
 libraryDependencies += Seq(
     "org.typelevel" %% "cats-core" % catsVersion
