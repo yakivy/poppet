@@ -24,13 +24,9 @@ class ConsumerSpec extends FreeSpec {
             })(
             new ExchangeCoder[Map[String, String], Map[String, String], Id] {
                 override def drequest: Coder[Map[String, String], Id[Request[Map[String, String]]]] =
-                    a => Request(a("service"), a("method"), a.view.mapValues(v => Map("value" -> v)).toMap)
+                    a => Request(a("service"), a("method"), Map("a" -> Map("value" -> a("a"))))
                 override def erequest: Coder[Request[Map[String, String]], Id[Map[String, String]]] =
-                    a => Map(
-                        "service" -> a.service,
-                        "method" -> a.method,
-                        "a" -> a.arguments("a")("value")
-                    )
+                    a => Map("service" -> a.service, "method" -> a.method, "a" -> a.arguments("a")("value"))
                 override def dresponse: Coder[Map[String, String], Id[Response[Map[String, String]]]] =
                     a => Response(a)
                 override def eresponse: Coder[Response[Map[String, String]], Id[Map[String, String]]] =
