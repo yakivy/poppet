@@ -300,7 +300,7 @@ Provider(
 ```
 
 ### Custom kinds
-Out of the box library supports only server data kind as a service return kind, to add custom type you need to write coders (alias for implicit scala `Function1`) for custom type. So to be able to return `Id` kinds from service that is being provided/consumed by play server (operates `Future`), you need to write `Future` to `Id` coders like:
+Out of the box library supports only server data kind as a service return kind (`Future` for play, `Id` for spring and so on). To return custom kind in a service you need to define coders (alias for implicit scala `Function1`) from server kind to that kind. For example, to be able to return `Id` kind from service that is being provided or consumed by play framework, you need coders from `Future` to `Id`:
 ```scala
 implicit def futureCoderToIdCoder[A, B](
     implicit coder: Coder[A, Future[B]]
@@ -309,7 +309,7 @@ implicit def coderToLeftFutureCoder[A, B](
     implicit coder: Coder[A, B]
 ): Coder[Future[A], B] = a => coder(Await.result(a, Duration.Inf))
 ```
-more examples can be found in `*CoderInstances` traits like `poppet.coder.play.instances.PlayJsonCoderInstances`
+more examples can be found in `*CoderInstances` traits (for instance `poppet.coder.play.instances.PlayJsonCoderInstances`)
 
 ### Error handling
 Development in progress...
