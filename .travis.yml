@@ -3,16 +3,15 @@ language: scala
 jdk:
   - openjdk11
 
-jobs:
-  include:
-    - stage: build and test
-      scala:
-        - 2.12.10
-        - 2.13.3
-      script:
-        - sbt ++$TRAVIS_SCALA_VERSION clean coverage test coverageReport
-      after_success:
-        - bash <(curl -s https://codecov.io/bash)
+scala:
+  - 2.12.10
+  - 2.13.3
+
+script:
+  - sbt ++$TRAVIS_SCALA_VERSION clean coverage test coverageReport
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
 
 cache:
   directories:
