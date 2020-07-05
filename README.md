@@ -20,6 +20,7 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
         1. [Provider](#provider-1)
         1. [Consumer](#consumer-1)
 1. [Decorators](#decorators)
+1. [Custom kinds](#custom-kinds)
 1. [Error handling](#error-handling)
 1. [Examples](#examples)
 1. [Notes](#notes)
@@ -297,6 +298,18 @@ Provider(
     ProviderProcessor(helloService).generate()
 ).materialize()
 ```
+
+### Custom kinds
+Out of the box library supports only server data kind as a service return kind, to add custom type you need to write coders (alias for implicit scala `Function1`) for custom type. So to be able to return `Id` kinds from service that is being provided/consumed by play server (operates `Future`), you need to write `Future` to `Id` coders like:
+```scala
+implicit def futureCoderToIdCoder[A, B](
+    implicit coder: Coder[A, Future[B]]
+): Coder[A, B] = a => Await.result(coder(a), Duration.Inf)
+implicit def coderToLeftFutureCoder[A, B](
+    implicit coder: Coder[A, B]
+): Coder[Future[A], B] = a => coder(Await.result(a, Duration.Inf))
+```
+more examples can be found in `*CoderInstances` traits like `poppet.coder.play.instances.PlayJsonCoderInstances`
 
 ### Error handling
 Development in progress...
