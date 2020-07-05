@@ -8,11 +8,6 @@ jobs:
     - &build_test
       stage: build and test
       scala:
-        - 2.11.12
-      script:
-        - sbt ++$TRAVIS_SCALA_VERSION clean test
-    - stage: build and test
-      scala:
         - 2.12.10
       script:
         - sbt ++$TRAVIS_SCALA_VERSION clean coverage test coverageReport
@@ -20,7 +15,7 @@ jobs:
         - bash <(curl -s https://codecov.io/bash)
     - <<: *build_test
       scala:
-        - 2.13.1
+        - 2.13.3
 
 cache:
   directories:
