@@ -5,17 +5,14 @@ jdk:
 
 jobs:
   include:
-    - &build_test
-      stage: build and test
+    - stage: build and test
       scala:
         - 2.12.10
+        - 2.13.3
       script:
         - sbt ++$TRAVIS_SCALA_VERSION clean coverage test coverageReport
       after_success:
         - bash <(curl -s https://codecov.io/bash)
-    - <<: *build_test
-      scala:
-        - 2.13.3
 
 cache:
   directories:
