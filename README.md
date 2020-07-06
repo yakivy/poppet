@@ -9,6 +9,8 @@
 Poppet is a functional, extensible, type-based Scala library for generating RPC services from pure service traits.
 
 ### Table of contents
+1. [Supported Frameworks](#supported-frameworks)
+1. [Design](#design)
 1. [Quick start](#quick-start)
     1. [Play Framework](#play-framework)
         1. [API](#api)
@@ -24,6 +26,33 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
 1. [Error handling](#error-handling)
 1. [Examples](#examples)
 1. [Notes](#notes)
+
+### Supported frameworks
+
+Provider: `play`, `spring-web`  
+Consumer: `play-ws`, `spring-web`  
+Coder: `play-json`, `jackson`  
+
+In progress: `http4s`, `circe`  
+
+### Design
+
+Library consists of three parts: coder, provider and consumer.
+
+##### Coder
+`Coder` is responsible for converting low level interaction data type (mainly `Array[Byte]`) into intermediate data type (mainly json like structure) and, after, models. Coders on provider and consumer sides should be compatible (generate same intermediate data for same models)
+
+##### Provider
+`Provider` is responsible for exposing endpoints for given services, as a materialization result can return action, route or request-response function for the server that is built on. Main parts of provider:
+- `Server` - aggregates logic for receiving request and pushing response (in most cases is same to your web framework)
+- `Coder` - [here](#coder)
+- `ProviderProcessor` - delegates request to specific service method, uses macros for generating internals
+
+##### Consumer
+`Consumer` is responsible for proxying calls from service to provider endpoints, as a materialization result always returns instance of given trait that you can use as any other trait. Main parts of consumer:
+- `Client` - aggregates logic for calling provider and receiving response
+- `Coder` - [here](#coder)
+- `ConsumerProcessor` - creates requests from service calls, uses macros for generating internals
 
 ### Quick start
 Put library version in the build file and add cats dependency, let's assume you are using sbt:
