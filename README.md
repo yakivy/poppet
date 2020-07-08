@@ -31,9 +31,9 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
 
 Provider: `play`, `spring-web`  
 Consumer: `play-ws`, `spring-web`  
-Coder: `play-json`, `jackson`  
+Coder: `circe`, `play-json`, `jackson`  
 
-In progress: `http4s`, `circe`  
+In progress: `http4s`   
 
 ### Design
 
@@ -43,12 +43,12 @@ Library consists of three parts: coder, provider and consumer.
 
 `Provider` is responsible for exposing endpoints for given services, as a materialization result can return action, route or request-response function for the server that is built on. Main parts of provider:
 - `Server` - aggregates logic for receiving request and pushing response (in most cases is same to your web framework)
-- `Coder` - ☝️
+- `Coder` - (described above)
 - `ProviderProcessor` - delegates request to specific service method, uses macros for generating internals
 
 `Consumer` is responsible for proxying calls from service to provider endpoints, as a materialization result always returns instance of given trait that you can use as any other trait. Main parts of consumer:
 - `Client` - aggregates logic for calling provider and receiving response
-- `Coder` - ☝️
+- `Coder` - (described above)
 - `ConsumerProcessor` - creates requests from service calls, uses macros for generating internals
 
 ### Quick start

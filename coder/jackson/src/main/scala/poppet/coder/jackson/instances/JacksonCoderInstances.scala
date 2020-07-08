@@ -3,6 +3,7 @@ package poppet.coder.jackson.instances
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.ScalaObjectMapper
 import poppet.coder.Coder
@@ -24,7 +25,10 @@ trait LpJacksonCoderInstances {
     implicit def jsonToAnyCoder[A](implicit om: ObjectMapper): Coder[JsonNode, A] = macro jsonToAnyCoderImpl[A]
 }
 
-trait JacksonCoderInstances extends CoderInstances with LpJacksonCoderInstances
+trait JacksonCoderInstances extends CoderInstances with LpJacksonCoderInstances {
+    implicit val toUnitCoder: Coder[JsonNode, Unit] = _ => ()
+    implicit val fromUnitCoder: Coder[Unit, JsonNode] = _ => NullNode.instance
+}
 
 object JacksonCoderInstances {
     def jsonToAnyCoderImpl[A](

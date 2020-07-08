@@ -3,6 +3,7 @@ lazy val versions = new {
     val scala212 = "2.12.10"
     val cats = "2.0.0"
     val scalatest = "3.0.8"
+    val circe = "0.13.0"
     val play = "2.8.1"
     val jackson = "2.11.1"
     val spring = "5.2.7.RELEASE"
@@ -51,6 +52,7 @@ lazy val root = project.in(file("."))
     .settings(publish / skip := true)
     .aggregate(
         coder,
+        circeCoder,
         jacksonCoder,
         playJsonCoder,
         provider,
@@ -66,6 +68,17 @@ lazy val coder = project.in(file("coder/core"))
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
     .settings(commonDependencies: _*)
+
+lazy val circeCoder = project.in(file("coder/circe"))
+    .settings(name := "poppet-coder-circe")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(commonDependencies: _*)
+    .settings(libraryDependencies ++= Seq(
+        "io.circe" %% "circe-parser" % versions.circe % "test,provided",
+        "io.circe" %% "circe-generic" % versions.circe % "test,provided"
+    ))
+    .dependsOn(coder % "compile->compile;test->test")
 
 lazy val jacksonCoder = project.in(file("coder/jackson"))
     .settings(name := "poppet-coder-jackson")
