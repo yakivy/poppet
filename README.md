@@ -21,9 +21,10 @@ Poppet is a functional, extensible, type-based Scala library for generating RPC 
         1. [API](#api-1)
         1. [Provider](#provider-1)
         1. [Consumer](#consumer-1)
-1. [Decorators](#decorators)
-1. [Custom kinds](#custom-kinds)
-1. [Error handling](#error-handling)
+1. [Customizations](#decorators)
+    1. [Decorators](#decorators)
+    1. [Custom kinds](#custom-kinds)
+    1. [Error handling](#error-handling)
 1. [Examples](#examples)
 1. [Notes](#notes)
 
