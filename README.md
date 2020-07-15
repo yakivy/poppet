@@ -327,14 +327,20 @@ Provider(
 ```
 
 ### Custom kinds
-Out of the box library supports only server data kind as a service return kind (`Future` for play, `Id` for spring and so on). To return custom kind in a service you need to define coders (alias for implicit scala `Function1`) from server kind to that kind. For example, to be able to return `Id` kind from service that is being provided or consumed by play framework, you need coders from `Future` to `Id`:
+Out of the box library supports only server data kind as a service return kind (`Future` for play, `Id` for spring and so on). To return custom kind in a service you need to define coders (alias for implicit scala `Function1`) from server kind to that kind:
+ ```scala
+implicit def pureServerCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, A[Y]]
+implicit def pureServiceCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, B[Y]]
+implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, B[Y]]): Coder[A[X], B[Y]]
+implicit def pureServiceLeftCoder[X, Y](implicit coder: Coder[X, A[Y]]): Coder[B[X], A[Y]]
+```
+For example, to be able to return `Id` kind from service that is being provided or consumed by play framework, you need coders from `Future` to `Id`:
 ```scala
-implicit def futureCoderToIdCoder[A, B](
-    implicit coder: Coder[A, Future[B]]
-): Coder[A, B] = a => Await.result(coder(a), Duration.Inf)
-implicit def coderToLeftFutureCoder[A, B](
-    implicit coder: Coder[A, B]
-): Coder[Future[A], B] = a => coder(Await.result(a, Duration.Inf))
+// pureServerCoder is already provided in poppet.coder.instances.CoderInstances.coderToFutureCoder
+// pureServiceCoder is already provided in poppet.coder.instances.CoderInstances.idCoder
+implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, Id[Y]]): Coder[Future[X], Id[Y]] =
+    a => coder(Await.result(a, Duration.Inf))
+// pureServiceLeftCoder is already provided in poppet.coder.instances.CoderInstances.idCoder
 ```
 more examples can be found in `*CoderInstances` traits (for instance `poppet.coder.play.instances.PlayJsonCoderInstances`)
 

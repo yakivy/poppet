@@ -3,8 +3,7 @@ package poppet.provider
 import cats.Id
 import org.scalatest.FreeSpec
 import poppet.coder.Coder
-import poppet.dto.Request
-import poppet.dto.Response
+import scala.concurrent.Future
 
 class ProviderProcessorSpec extends FreeSpec {
     "Provider processor" - {
@@ -24,7 +23,7 @@ class ProviderProcessorSpec extends FreeSpec {
             override def a2(b0: Boolean, b1: Boolean): Int = b0.toInt + b1.toInt
         }
 
-        "when have id data kind" - {
+        "when has id data kind" - {
             implicit val c0: Coder[Int, String] = _.toString
             implicit val c1: Coder[String, Boolean] = _.toBoolean
 
@@ -93,7 +92,7 @@ class ProviderProcessorSpec extends FreeSpec {
                 }
             }
         }
-        "when have future data kind" - {
+        "when has future data kind" - {
             import cats.implicits._
             import scala.concurrent.ExecutionContext.Implicits.global
             import scala.concurrent.Await
@@ -118,6 +117,36 @@ class ProviderProcessorSpec extends FreeSpec {
                 assert(p.methods(3).name == "a2" && p.methods(3).arguments == List("b0", "b1")
                     && result(p.methods(3).f(Map("b0" -> "true", "b1" -> "true"))) == "2")
             }
+        }
+        "when has A data kind and service has B data kind should generate instance" in {
+            import scala.util.Try
+            import cats.implicits._
+
+            type A[X] = Option[X]
+            type B[Y] = Try[Y]
+
+            implicit val c0: Coder[Int, String] = _.toString
+            implicit val c1: Coder[String, Boolean] = _.toBoolean
+
+            implicit def pureServerCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, A[Y]] =
+                a => Option(coder(a))
+            implicit def pureServiceLeftCoder[X, Y](implicit coder: Coder[X, A[Y]]): Coder[B[X], A[Y]] =
+                a => a.map(coder.apply).get
+
+            trait C {
+                def a(b: Boolean): B[Int]
+            }
+            val c: C = new C {
+                override def a(b: Boolean): B[Int] = Try(b.toInt)
+            }
+
+            val p = ProviderProcessor(c).generate[String, A]()
+
+            def result[X](value: A[X]): X = value.get
+
+            assert(p.service == "poppet.provider.ProviderProcessorSpec.C")
+            assert(p.methods(0).name == "a" && p.methods(0).arguments == List("b")
+                && result(p.methods(0).f(Map("b" -> "true"))) == "1")
         }
     }
 }

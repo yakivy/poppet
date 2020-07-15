@@ -17,7 +17,7 @@ class ConsumerProcessorSpec extends FreeSpec {
 
         var request: Request[String] = null
 
-        "when have id data kind" - {
+        "when has id data kind" - {
             implicit val c0: Coder[String, Int] = _.toInt
             implicit val c1: Coder[Boolean, String] = _.toString
 
@@ -102,7 +102,7 @@ class ConsumerProcessorSpec extends FreeSpec {
                 }
             }
         }
-        "when have future data kind" - {
+        "when has future data kind" - {
             import cats.implicits._
             import scala.concurrent.ExecutionContext.Implicits.global
             import scala.concurrent.Await
@@ -131,6 +131,36 @@ class ConsumerProcessorSpec extends FreeSpec {
                     "poppet.consumer.ConsumerProcessorSpec.A", "a2", Map("b0" -> "true", "b1" -> "false")
                 ))
             }
+        }
+        "when has A data kind and service has B data kind should generate instance" in {
+            import scala.util.Try
+            import cats.implicits._
+
+            type A[X] = Option[X]
+            type B[Y] = Try[Y]
+
+            implicit val c0: Coder[String, Int] = _.toInt
+            implicit val c1: Coder[Boolean, String] = _.toString
+
+            implicit def pureServerCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, A[Y]] =
+                a => Option(coder(a))
+            implicit def pureServiceCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, B[Y]] =
+                a => Try(coder(a))
+            implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, B[Y]]): Coder[A[X], B[Y]] =
+                a => a.map(coder.apply).get
+
+            trait C {
+                def a(b: Boolean): B[Int]
+            }
+
+            val p = ConsumerProcessor[C].generate[String, A]().f(r => {
+                request = r
+                Option(Response("0"))
+            })
+
+            assert(p.a(true) == Try(0) && request == Request(
+                "poppet.consumer.ConsumerProcessorSpec.C", "a", Map("b" -> "true")
+            ))
         }
     }
 }
