@@ -7,25 +7,22 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import poppet.example.spring.service.ProviderGenerator;
 import poppet.example.spring.service.UserService;
+import scala.Function1;
 
 @Controller
 public class ProviderController {
-    private UserService userService;
-    private String authHeader;
-    private String authSecret;
+    private final Function1<RequestEntity<byte[]>, ResponseEntity<byte[]>> provider;
 
     public ProviderController(
         UserService userService,
         @Value("${auth.header}") String authHeader,
         @Value("${auth.secret}") String authSecret
     ) {
-        this.userService = userService;
-        this.authHeader = authHeader;
-        this.authSecret = authSecret;
+        provider = ProviderGenerator.apply(userService, authHeader, authSecret);
     }
 
     @RequestMapping("/api/service")
     public ResponseEntity<byte[]> apply(RequestEntity<byte[]> request) {
-        return ProviderGenerator.apply(userService, authHeader, authSecret).apply(request);
+        return provider.apply(request);
     }
 }

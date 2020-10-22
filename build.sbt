@@ -6,7 +6,8 @@ lazy val versions = new {
     val circe = "0.13.0"
     val play = "2.8.1"
     val jackson = "2.11.1"
-    val spring = "5.2.7.RELEASE"
+    val http4s = "0.21.8"
+    val logback = "1.2.3"
     val springBoot = "2.3.1.RELEASE"
 }
 
@@ -56,11 +57,7 @@ lazy val root = project.in(file("."))
         jacksonCoder,
         playJsonCoder,
         provider,
-        playProvider,
-        springProvider,
         consumer,
-        playWsConsumer,
-        springConsumer
     )
 
 lazy val coder = project.in(file("coder/core"))
@@ -101,57 +98,57 @@ lazy val playJsonCoder = project.in(file("coder/play-json"))
     ))
     .dependsOn(coder % "compile->compile;test->test")
 
-lazy val provider = project.in(file("provider/core"))
-    .settings(name := "poppet-provider-core")
+lazy val provider = project.in(file("provider"))
+    .settings(name := "poppet-provider")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
     .settings(commonDependencies: _*)
     .dependsOn(coder % "compile->compile;test->test")
 
-lazy val playProvider = project.in(file("provider/play"))
-    .settings(name := "poppet-provider-play")
-    .settings(commonSettings: _*)
-    .settings(publishingSettings: _*)
-    .settings(libraryDependencies ++= Seq(
-        "com.typesafe.play" %% "play" % versions.play % "test,provided",
-    ))
-    .dependsOn(provider % "compile->compile;test->test")
-
-lazy val springProvider = project.in(file("provider/spring"))
-    .settings(name := "poppet-provider-spring")
-    .settings(commonSettings: _*)
-    .settings(publishingSettings: _*)
-    .settings(commonDependencies: _*)
-    .settings(libraryDependencies ++= Seq(
-        "org.springframework" % "spring-web" % versions.spring % "test,provided",
-    ))
-    .dependsOn(provider % "compile->compile;test->test")
-
-lazy val consumer = project.in(file("consumer/core"))
-    .settings(name := "poppet-consumer-core")
+lazy val consumer = project.in(file("consumer"))
+    .settings(name := "poppet-consumer")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
     .settings(commonDependencies: _*)
     .dependsOn(coder % "compile->compile;test->test")
 
-lazy val playWsConsumer = project.in(file("consumer/play-ws"))
-    .settings(name := "poppet-consumer-play-ws")
+lazy val http4sApiExample = project.in(file("example/http4s/api"))
+    .settings(name := "poppet-api-http4s-example")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
+    .settings(publish / skip := true)
     .settings(libraryDependencies ++= Seq(
-        "com.typesafe.play" %% "play-ws" % versions.play % "test,provided",
+        "org.typelevel" %% "cats-effect" % versions.cats,
     ))
-    .dependsOn(consumer % "compile->compile;test->test")
 
-lazy val springConsumer = project.in(file("consumer/spring"))
-    .settings(name := "poppet-consumer-spring")
+lazy val http4sProviderExample = project.in(file("example/http4s/provider"))
+    .settings(name := "poppet-provider-http4s-example")
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
-    .settings(commonDependencies: _*)
+    .settings(publish / skip := true)
     .settings(libraryDependencies ++= Seq(
-        "org.springframework" % "spring-web" % versions.spring % "test,provided",
+        "io.circe" %% "circe-generic" % versions.circe,
+        "org.http4s" %% "http4s-circe" % versions.http4s,
+        "org.http4s" %% "http4s-dsl" % versions.http4s,
+        "org.http4s" %% "http4s-blaze-server" % versions.http4s,
+        "ch.qos.logback" % "logback-classic" % versions.logback,
     ))
-    .dependsOn(consumer % "compile->compile;test->test")
+    .dependsOn(circeCoder, provider, http4sApiExample)
+
+lazy val http4sConsumerExample = project.in(file("example/http4s/consumer"))
+    .settings(name := "poppet-consumer-http4s-example")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(publish / skip := true)
+    .settings(libraryDependencies ++= Seq(
+        "io.circe" %% "circe-generic" % versions.circe,
+        "org.http4s" %% "http4s-circe" % versions.http4s,
+        "org.http4s" %% "http4s-dsl" % versions.http4s,
+        "org.http4s" %% "http4s-blaze-server" % versions.http4s,
+        "org.http4s" %% "http4s-blaze-client" % versions.http4s,
+        "ch.qos.logback" % "logback-classic" % versions.logback,
+    ))
+    .dependsOn(circeCoder, consumer, http4sApiExample)
 
 lazy val playApiExample = project.in(file("example/play/api"))
     .settings(name := "poppet-api-play-example")
@@ -172,7 +169,7 @@ lazy val playProviderExample = project.in(file("example/play/provider"))
         "org.typelevel" %% "cats-core" % versions.cats,
         guice
     ))
-    .dependsOn(playJsonCoder, playProvider, playApiExample)
+    .dependsOn(playJsonCoder, provider, playApiExample)
 
 lazy val playConsumerExample = project.in(file("example/play/consumer"))
     .enablePlugins(PlayScala)
@@ -184,7 +181,7 @@ lazy val playConsumerExample = project.in(file("example/play/consumer"))
         "org.typelevel" %% "cats-core" % versions.cats,
         guice, ws
     ))
-    .dependsOn(playJsonCoder, playWsConsumer, playApiExample)
+    .dependsOn(playJsonCoder, consumer, playApiExample)
 
 lazy val springApiExample = project.in(file("example/spring/api"))
     .settings(name := "poppet-api-spring-example")
@@ -203,7 +200,7 @@ lazy val springProviderExample = project.in(file("example/spring/provider"))
         "org.springframework.boot" % "spring-boot-starter-web" % versions.springBoot
     ))
     .settings(mainClass in Compile := Some("poppet.example.spring.Application"))
-    .dependsOn(jacksonCoder, springProvider, springApiExample)
+    .dependsOn(jacksonCoder, provider, springApiExample)
 
 lazy val springConsumerExample = project.in(file("example/spring/consumer"))
     .settings(name := "poppet-consumer-spring-example")
@@ -216,4 +213,4 @@ lazy val springConsumerExample = project.in(file("example/spring/consumer"))
         "org.springframework.boot" % "spring-boot-starter-web" % versions.springBoot
     ))
     .settings(mainClass in Compile := Some("poppet.example.spring.Application"))
-    .dependsOn(jacksonCoder, springConsumer, springApiExample)
+    .dependsOn(jacksonCoder, consumer, springApiExample)

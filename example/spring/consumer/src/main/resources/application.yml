@@ -2,7 +2,6 @@ server:
   port: 9002
 
 auth:
-  header: "auth"
   secret: "my-secret"
 
 consumer:

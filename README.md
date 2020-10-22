@@ -42,15 +42,9 @@ Library consists of three parts: coder, provider and consumer.
 
 `Coder` is responsible for converting low level interaction data type (mainly `Array[Byte]`) into intermediate data type (mainly json like structure) and, after, models. Coders on provider and consumer sides should be compatible (generate same intermediate data for same models)  
 
-`Provider` is responsible for exposing endpoints for given services, as a materialization result can return action, route or request-response function for the server that is built on. Main parts of provider:
-- `Server` - aggregates logic for receiving request and pushing response (in most cases is same to your web framework)
-- `Coder` - (described above)
-- `ProviderProcessor` - delegates request to specific service method, uses macros for generating internals
+`Provider` is responsible for converting consumer requests to service calls, as a materialization result returns request-response function that needs to be exposed for consumer. 
 
-`Consumer` is responsible for proxying calls from service to provider endpoints, as a materialization result always returns instance of given trait that you can use as any other trait. Main parts of consumer:
-- `Client` - aggregates logic for calling provider and receiving response
-- `Coder` - (described above)
-- `ConsumerProcessor` - creates requests from service calls, uses macros for generating internals
+`Consumer` is responsible for proxying calls from service to provider endpoints, as a materialization result returns instance of given trait that you can use as any other trait.
 
 ### Quick start
 Put library version in the build file and add cats dependency, let's assume you are using sbt:

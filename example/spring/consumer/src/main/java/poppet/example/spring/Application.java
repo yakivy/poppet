@@ -23,9 +23,8 @@ public class Application {
     public UserService userService(
         RestTemplate restTemplate,
         @Value("${consumer.url}") String url,
-        @Value("${auth.header}") String authHeader,
         @Value("${auth.secret}") String authSecret
     ) {
-        return ConsumerGenerator.userService(restTemplate, url, authHeader, authSecret);
+        return ConsumerGenerator.userService(restTemplate, url, authSecret);
     }
 }

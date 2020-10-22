@@ -2,24 +2,24 @@ package poppet.coder
 
 import cats.Id
 import poppet.coder.CoderFixture.A
-import poppet.dto.Request
-import poppet.dto.Response
+import poppet._
 
 trait CoderFixture {
     val stringExample = "a"
     val intExample = 1
     val caseClassExample = A(stringExample, intExample)
 
-    def assertExchangeCoder[A, I](coder: ExchangeCoder[A, I, Id])(implicit sc: Coder[String, I]): Unit = {
+    def assertExchangeCoder[I](coder: ExchangeCoder[I, Id])(implicit sc: Coder[String, I]): Unit = {
         val request = Request[I]("A", "a", Map("b" -> sc("c")))
         val response = Response[I](sc("c"))
-        assert(coder.drequest(coder.erequest(request)) == request)
-        assert(coder.dresponse(coder.eresponse(response)) == response)
+        assert(coder.irequest(coder.brequest(request)) == request)
+        assert(coder.iresponse(coder.bresponse(response)) == response)
     }
 
-    def assertCustomCoder[A, I](
-        coder: ExchangeCoder[_, I, Id])(value: A
-    )(implicit fc: Coder[A, I], bc: Coder[I, A]): Unit = {
+    def assertCustomCoder[I, A](
+        coder: ExchangeCoder[I, Id])(value: A)(
+        implicit fc: Coder[A, I], bc: Coder[I, A]
+    ): Unit = {
         assert(bc(fc(value)) == value)
     }
 }

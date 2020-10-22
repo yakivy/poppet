@@ -1,7 +1,7 @@
 package poppet.coder.jackson
 
 trait JacksonCoderDsl {
-    type JacksonCoder[F[_]] = poppet.coder.jackson.JacksonCoder[F]
+    type JacksonCoder[F[_]] = core.JacksonCoder[F]
 
-    val JacksonCoder = poppet.coder.jackson.JacksonCoder
+    val JacksonCoder = core.JacksonCoder
 }
