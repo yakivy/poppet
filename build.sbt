@@ -27,11 +27,13 @@ lazy val commonSettings = Seq(
     homepage := Some(url("https://github.com/yakivy/poppet")),
     scalaVersion := versions.scala213,
     crossScalaVersions := Seq(versions.scala213, versions.scala212),
+    addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full)
 )
 
 lazy val commonDependencies = Seq(
     libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-core" % versions.cats % "test,provided",
+        "org.typelevel" %% "cats-effect" % versions.cats % "test,provided",
         "org.scalatest" %% "scalatest" % versions.scalatest % "test",
         "org.scala-lang" % "scala-reflect" % scalaVersion.value
     )

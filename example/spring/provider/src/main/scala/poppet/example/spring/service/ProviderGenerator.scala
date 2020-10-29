@@ -1,6 +1,7 @@
 package poppet.example.spring.service
 
 import cats.Id
+import com.fasterxml.jackson.databind.JsonNode
 import org.springframework.http.HttpStatus
 import org.springframework.http.RequestEntity
 import org.springframework.http.ResponseEntity
@@ -18,8 +19,7 @@ object ProviderGenerator {
     def apply(
         userService: UserService)(authHeader: String, authSecret: String
     ): RequestEntity[Array[Byte]] => ResponseEntity[Array[Byte]] = {
-        Provider[Id](
-            JacksonCoder())(
+        Provider[JsonNode, Id].apply(
             ProviderProcessor(userService).generate()
         ).materialize()
             .compose((_: RequestEntity[Array[Byte]]).getBody)

@@ -31,7 +31,7 @@ object ConsumerProcessor {
                 val methodName = m.name
                 val arguments = m.paramLists.map(ps => ps.map(p => q"${Ident(p.name)}: ${p.typeSignature}"))
                 val codedArgument: c.universe.Symbol => Tree = a => q"""implicitly[
-                    _root_.poppet.Coder[${a.typeSignature},${appliedType(ftype, itype)}]
+                    _root_.poppet.ModelCoder[${a.typeSignature},${appliedType(ftype, itype)}]
                 ].apply(${Ident(a.name)})"""
                 val withCodedArguments: Tree => Tree = tree => m.paramLists.flatten match {
                     case Nil => tree
@@ -52,7 +52,7 @@ object ConsumerProcessor {
                             )""")}
                         )
                     ))""")})(_.value)
-                    implicitly[_root_.poppet.Coder[${appliedType(ftype, itype)}, ${m.returnType}]].apply(result)
+                    implicitly[_root_.poppet.ModelCoder[${appliedType(ftype, itype)}, ${m.returnType}]].apply(result)
                 }"""
             }.toList
         q"""(

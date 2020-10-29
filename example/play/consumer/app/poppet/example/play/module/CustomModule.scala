@@ -7,6 +7,7 @@ import javax.inject.Singleton
 import play.api.Configuration
 import play.api.inject.SimpleModule
 import play.api.inject._
+import play.api.libs.json.JsValue
 import play.api.libs.ws.WSClient
 import poppet.coder.play.all._
 import poppet.consumer.all._
@@ -29,7 +30,7 @@ class UserServiceProvider @Inject()(
         request => wsClient.url(url).withHttpHeaders(authHeader -> authSecret).post(request)
             .map(_.bodyAsBytes.toByteBuffer.array())
 
-    override def get(): UserService = Consumer[Future].apply(
-        client, PlayJsonCoder())(ConsumerProcessor[UserService].generate()
+    override def get(): UserService = Consumer[JsValue, Future].apply(
+        client)(ConsumerProcessor[UserService].generate()
     ).materialize()
 }

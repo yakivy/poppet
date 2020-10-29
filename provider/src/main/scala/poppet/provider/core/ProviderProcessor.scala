@@ -31,7 +31,7 @@ object ProviderProcessor {
             .map { m =>
                 val argumentNames = m.paramLists.flatten.map(_.name.toString)
                 val codedArgument: c.universe.Symbol => Tree = a => q"""implicitly[
-                    _root_.poppet.Coder[$itype,${appliedType(ftype, a.typeSignature)}]
+                    _root_.poppet.all.ModelCoder[$itype,${appliedType(ftype, a.typeSignature)}]
                 ].apply(as(${a.name.toString}))"""
                 val withCodedArguments: Tree => Tree = tree => m.paramLists.flatten match {
                     case Nil => tree
@@ -48,7 +48,7 @@ object ProviderProcessor {
                     ${m.name.toString},
                     _root_.scala.List(..$argumentNames),
                     as => ${withCodedArguments(q"""
-                        implicitly[_root_.poppet.Coder[${m.returnType},${appliedType(ftype, itype)}]].apply(${
+                        implicitly[_root_.poppet.all.ModelCoder[${m.returnType},${appliedType(ftype, itype)}]].apply(${
                         groupedArguments.foldLeft[Tree](
                             Select(service, m.name.toTermName))(
                             (acc, pl) => Apply(acc, pl)

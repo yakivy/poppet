@@ -1,3 +1,5 @@
 package poppet.core
 
-case class Error(message: String) extends Exception
+class Error(message: String, e: Throwable) extends Exception(message, e) {
+    def this(message: String) = this(message, null)
+}

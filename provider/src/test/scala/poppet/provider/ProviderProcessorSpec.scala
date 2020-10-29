@@ -2,9 +2,7 @@ package poppet.provider
 
 import cats.Id
 import org.scalatest.FreeSpec
-import poppet.core.Coder
-import poppet.provider.ProviderProcessor
-import scala.concurrent.Future
+import poppet._
 
 class ProviderProcessorSpec extends FreeSpec {
     "Provider processor" - {
@@ -25,8 +23,8 @@ class ProviderProcessorSpec extends FreeSpec {
         }
 
         "when has id data kind" - {
-            implicit val c0: Coder[Int, String] = _.toString
-            implicit val c1: Coder[String, Boolean] = _.toBoolean
+            implicit val c0: ModelCoder[Int, String] = _.toString
+            implicit val c1: ModelCoder[String, Boolean] = _.toBoolean
 
             "should generate instance" - {
                 "for methods with different arguments number" in {
@@ -100,8 +98,8 @@ class ProviderProcessorSpec extends FreeSpec {
             import scala.concurrent.Future
             import scala.concurrent.duration.Duration
 
-            implicit val c0: Coder[Int, Future[String]] = a => Future.successful(a.toString)
-            implicit val c1: Coder[String, Future[Boolean]] = a => Future.successful(a.toBoolean)
+            implicit val c0: ModelCoder[Int, Future[String]] = a => Future.successful(a.toString)
+            implicit val c1: ModelCoder[String, Future[Boolean]] = a => Future.successful(a.toBoolean)
 
             "should generate instance" in {
                 val p = ProviderProcessor(a).generate[String, Future]()
@@ -126,12 +124,12 @@ class ProviderProcessorSpec extends FreeSpec {
             type A[X] = Option[X]
             type B[Y] = Try[Y]
 
-            implicit val c0: Coder[Int, String] = _.toString
-            implicit val c1: Coder[String, Boolean] = _.toBoolean
+            implicit val c0: ModelCoder[Int, String] = _.toString
+            implicit val c1: ModelCoder[String, Boolean] = _.toBoolean
 
-            implicit def pureServerCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, A[Y]] =
+            implicit def pureServerCoder[X, Y](implicit coder: ModelCoder[X, Y]): ModelCoder[X, A[Y]] =
                 a => Option(coder(a))
-            implicit def pureServiceLeftCoder[X, Y](implicit coder: Coder[X, A[Y]]): Coder[B[X], A[Y]] =
+            implicit def pureServiceLeftCoder[X, Y](implicit coder: ModelCoder[X, A[Y]]): ModelCoder[B[X], A[Y]] =
                 a => a.map(coder.apply).get
 
             trait C {

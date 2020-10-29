@@ -2,6 +2,7 @@ package poppet.example.http4s.consumer.service
 
 import cats.effect.ContextShift
 import cats.effect.IO
+import io.circe.Json
 import io.circe.generic.auto._
 import org.http4s._
 import org.http4s.client.blaze._
@@ -24,7 +25,7 @@ class UserServiceProvider(authSecret: String)(implicit cs: ContextShift[IO]) {
             ))
         }
 
-    def get: UserService = Consumer[IO].apply(
-        client, CirceCoder())(ConsumerProcessor[UserService].generate()
+    def get: UserService = Consumer[Json, IO].apply(
+        client)(ConsumerProcessor[UserService].generate()
     ).materialize()
 }

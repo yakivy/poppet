@@ -13,12 +13,13 @@ import poppet.consumer.all._
 class Consumer[I, F[_] : Monad, S](
     client: Client[F],
     processor: ConsumerProcessor[I, F, S])(
-    implicit rCoder: ExchangeCoder[]
+    implicit bqcoder: ExchangeCoder[Request[I], F[Array[Byte]]],
+    iscoder: ExchangeCoder[Array[Byte], F[Response[I]]],
 ) {
     def materialize(): S = processor.process(irequest => for {
-        brequest <- coder.brequest(irequest)
+        brequest <- bqcoder(irequest)
         bresponse <- client(brequest)
-        iresponse <- coder.iresponse(bresponse)
+        iresponse <- iscoder(bresponse)
     } yield iresponse)
 }
 
@@ -28,7 +29,9 @@ object Consumer {
     class Builder[I, F[_]] {
         def apply[S](
             client: Client[F])(processor: ConsumerProcessor[I, F, S])(
-            implicit FM: Monad[F]
-        ): Consumer[I, F, S] = new Consumer(client, coder, processor)
+            implicit FM: Monad[F],
+            bqcoder: ExchangeCoder[Request[I], F[Array[Byte]]],
+            iscoder: ExchangeCoder[Array[Byte], F[Response[I]]],
+        ): Consumer[I, F, S] = new Consumer(client, processor)
     }
 }
