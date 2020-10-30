@@ -29,7 +29,7 @@ class ProviderController @Inject()(
         ProviderProcessor(helloService).generate()
     ).materialize()
     private val authDecorator: Request[ByteString] => Request[ByteString] = request => {
-        if (request.headers.get(Http.HeaderNames.AUTHORIZATION).contains(authSecret)) request
+        if (request.headers.get(Http.HeaderNames.PROXY_AUTHENTICATE).contains(authSecret)) request
         else throw new IllegalArgumentException("Wrong secret!")
     }
 

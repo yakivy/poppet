@@ -15,10 +15,9 @@ public class ProviderController {
 
     public ProviderController(
         UserService userService,
-        @Value("${auth.header}") String authHeader,
         @Value("${auth.secret}") String authSecret
     ) {
-        provider = ProviderGenerator.apply(userService, authHeader, authSecret);
+        provider = ProviderGenerator.apply(userService, authSecret);
     }
 
     @RequestMapping("/api/service")

@@ -33,7 +33,6 @@ lazy val commonSettings = Seq(
 lazy val commonDependencies = Seq(
     libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-core" % versions.cats % "test,provided",
-        "org.typelevel" %% "cats-effect" % versions.cats % "test,provided",
         "org.scalatest" %% "scalatest" % versions.scalatest % "test",
         "org.scala-lang" % "scala-reflect" % scalaVersion.value
     )
@@ -67,6 +66,16 @@ lazy val coder = project.in(file("coder/core"))
     .settings(commonSettings: _*)
     .settings(publishingSettings: _*)
     .settings(commonDependencies: _*)
+
+lazy val catsEffectCoder = project.in(file("coder/cats-effect"))
+    .settings(name := "poppet-coder-cats-effect")
+    .settings(commonSettings: _*)
+    .settings(publishingSettings: _*)
+    .settings(commonDependencies: _*)
+    .settings(libraryDependencies ++= Seq(
+        "org.typelevel" %% "cats-effect" % versions.cats % "test,provided",
+    ))
+    .dependsOn(coder % "compile->compile;test->test")
 
 lazy val circeCoder = project.in(file("coder/circe"))
     .settings(name := "poppet-coder-circe")
@@ -135,7 +144,7 @@ lazy val http4sProviderExample = project.in(file("example/http4s/provider"))
         "org.http4s" %% "http4s-blaze-server" % versions.http4s,
         "ch.qos.logback" % "logback-classic" % versions.logback,
     ))
-    .dependsOn(circeCoder, provider, http4sApiExample)
+    .dependsOn(circeCoder, catsEffectCoder, provider, http4sApiExample)
 
 lazy val http4sConsumerExample = project.in(file("example/http4s/consumer"))
     .settings(name := "poppet-consumer-http4s-example")
@@ -150,7 +159,7 @@ lazy val http4sConsumerExample = project.in(file("example/http4s/consumer"))
         "org.http4s" %% "http4s-blaze-client" % versions.http4s,
         "ch.qos.logback" % "logback-classic" % versions.logback,
     ))
-    .dependsOn(circeCoder, consumer, http4sApiExample)
+    .dependsOn(circeCoder, catsEffectCoder, consumer, http4sApiExample)
 
 lazy val playApiExample = project.in(file("example/play/api"))
     .settings(name := "poppet-api-play-example")

@@ -9,6 +9,7 @@ import org.http4s.client.blaze._
 import org.http4s.client.dsl.io._
 import org.http4s.headers._
 import org.http4s.implicits._
+import poppet.coder.cats.effect.all._
 import poppet.coder.circe.all._
 import poppet.consumer.Consumer
 import poppet.consumer.core.ConsumerProcessor

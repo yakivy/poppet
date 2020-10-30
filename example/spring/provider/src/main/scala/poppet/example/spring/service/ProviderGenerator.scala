@@ -2,6 +2,7 @@ package poppet.example.spring.service
 
 import cats.Id
 import com.fasterxml.jackson.databind.JsonNode
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.RequestEntity
 import org.springframework.http.ResponseEntity
@@ -10,20 +11,18 @@ import poppet.provider.all._
 
 object ProviderGenerator {
     private def authDecorator(
-        authHeader: String, authSecret: String,
+        authSecret: String
     ): RequestEntity[Array[Byte]] => RequestEntity[Array[Byte]] = request => {
-        if (request.getHeaders.get(authHeader).contains(authSecret)) request
+        if (request.getHeaders.get(HttpHeaders.AUTHORIZATION).contains(authSecret)) request
         else throw new IllegalArgumentException("Wrong secret!")
     }
 
     def apply(
-        userService: UserService)(authHeader: String, authSecret: String
+        userService: UserService, authSecret: String
     ): RequestEntity[Array[Byte]] => ResponseEntity[Array[Byte]] = {
-        Provider[JsonNode, Id].apply(
+        val server = Provider[JsonNode, Id].apply(
             ProviderProcessor(userService).generate()
         ).materialize()
-            .compose((_: RequestEntity[Array[Byte]]).getBody)
-            .compose(authDecorator(authHeader, authSecret))
-            .andThen(new ResponseEntity(_, HttpStatus.OK))
+        request => new ResponseEntity(server(authDecorator(authSecret)(request).getBody), HttpStatus.OK)
     }
 }
