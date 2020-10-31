@@ -15,26 +15,28 @@ Poppet is a minimal, extensible, type-based Scala library for generating RPC ser
     1. [API](#api)
     1. [Provider](#provider)
     1. [Consumer](#consumer)
-1. [Decorators](#decorators)
 1. [Custom kinds](#custom-kinds)
 1. [Error handling](#error-handling)
+1. [Custom logic](#custom-logic)
 1. [Examples](#examples)
 1. [Notes](#notes)
 
 ### Motivation
 
 You may find Poppet useful if you want to...
+- call services across the whole microservice solution with single line of code
+- keep your services sparklingly clean
+- richly customize transferring protocol
 
 ### Design
 
-Library consists of three parts: coder, provider and consumer.
+Library consists of three main parts: coder, provider and consumer.
 
-`Coder` is responsible for converting low level interaction data type (mainly `Array[Byte]`) into intermediate data type (mainly json like structure) and, after, models. Coders on provider and consumer sides should be compatible (generate same intermediate data for same models)  
-Supported coders: `circe`, `play-json`, `jackson`  
+`Coder` is responsible for converting low level interaction data type (mainly `Array[Byte]`) into models. Coders on provider and consumer sides should be compatible (generate same intermediate data for same models). OOTB supported coders: `circe`, `play-json`, `jackson`  
 
 `Provider` is responsible for converting consumer requests to service calls, as a materialization result returns request-response function that needs to be exposed for consumer. 
 
-`Consumer` is responsible for proxying calls from service to provider endpoints, as a materialization result returns instance of given trait that you can use as any other trait.
+`Consumer` is responsible for proxying calls from service to provider endpoints, as a materialization result returns the fully functional instance of given trait.
 
 ### Quick start
 Put library version in the build file and add cats dependency, let's assume you are using sbt:
@@ -47,33 +49,33 @@ libraryDependencies += Seq(
 ```
 
 #### API
-Define service API and share it between provider and consumer services (link formatter to the model or implement separately on both sides):
+Define clean service API and share it between provider and consumer services:
 ```scala
 case class User(email: String, firstName: String)
-object User {
-    implicit val F = Json.format[User]
-}
-
 trait UserService {
     def findById(id: String): Future[User]
 }
 ```
 #### Provider
-Implement API on provider side:
+Add poppet coder and provider dependencies to the build file, as an example I'll take http4s stack:
+```scala
+libraryDependencies += Seq(
+    "com.github.yakivy" %% "poppet-coder-circe" % poppetVersion,
+    "com.github.yakivy" %% "poppet-provider-play" % poppetVersion,
+    "org.http4s" %% "http4s-circe" % http4sVersion,
+    "org.http4s" %% "http4s-dsl" % http4sVersion,
+    "org.http4s" %% "http4s-blaze-server" % http4sVersion,
+)
+```
+Implement API with actual logic:
 ```scala
 class UserInternalService extends UserService {
     override def findById(id: String): Future[User] = {
         //emulation of business logic
-        Future.successful(User(id, "Antony"))
+        if (id == "1") Future.successful(User(id, "Antony"))
+        else Future.failed(new IllegalArgumentException("User is not found"))
     }
 }
-```
-Add play poppet coder and provider dependencies to the build file
-```scala
-libraryDependencies += Seq(
-    "com.github.yakivy" %% "poppet-coder-play" % poppetVersion,
-    "com.github.yakivy" %% "poppet-provider-play" % poppetVersion
-)
 ```
 Create a provider for service, keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
 ```scala
@@ -136,7 +138,28 @@ class UserController @Inject()(
 }
 ```
 
-### Decorators
+### Custom kinds
+Out of the box library supports only server data kind as a service return kind (`Future` for play, `Id` for spring and so on). To return custom kind in a service you need to define coders (alias for implicit scala `Function1`) from server kind to that kind:
+ ```scala
+implicit def pureServerCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, A[Y]]
+implicit def pureServiceCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, B[Y]]
+implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, B[Y]]): Coder[A[X], B[Y]]
+implicit def pureServiceLeftCoder[X, Y](implicit coder: Coder[X, A[Y]]): Coder[B[X], A[Y]]
+```
+For example, to be able to return `Id` kind from service that is being provided or consumed by play framework, you need coders from `Future` to `Id`:
+```scala
+// pureServerCoder is already provided in poppet.coder.instances.CoderInstances.coderToFutureCoder
+// pureServiceCoder is already provided in poppet.coder.instances.CoderInstances.idCoder
+implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, Id[Y]]): Coder[Future[X], Id[Y]] =
+    a => coder(Await.result(a, Duration.Inf))
+// pureServiceLeftCoder is already provided in poppet.coder.instances.CoderInstances.idCoder
+```
+more examples can be found in `*CoderInstances` traits (for instance `poppet.coder.play.instances.PlayJsonCoderInstances`)
+
+### Error handling
+Development in progress...
+
+### Custom logic
 Let's say you want to add simple auth for generated RPC endpoints, you can easily do it with help of decorators. Decorator is an alias for scala function that receives poppet flow as an input and returns decorated flow of the same type.  
 Firstly we need to define header where we want to pass the secret and the secret by itself:
 ```scala
@@ -176,27 +199,6 @@ Provider(
     ProviderProcessor(helloService).generate()
 ).materialize()
 ```
-
-### Custom kinds
-Out of the box library supports only server data kind as a service return kind (`Future` for play, `Id` for spring and so on). To return custom kind in a service you need to define coders (alias for implicit scala `Function1`) from server kind to that kind:
- ```scala
-implicit def pureServerCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, A[Y]]
-implicit def pureServiceCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, B[Y]]
-implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, B[Y]]): Coder[A[X], B[Y]]
-implicit def pureServiceLeftCoder[X, Y](implicit coder: Coder[X, A[Y]]): Coder[B[X], A[Y]]
-```
-For example, to be able to return `Id` kind from service that is being provided or consumed by play framework, you need coders from `Future` to `Id`:
-```scala
-// pureServerCoder is already provided in poppet.coder.instances.CoderInstances.coderToFutureCoder
-// pureServiceCoder is already provided in poppet.coder.instances.CoderInstances.idCoder
-implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, Id[Y]]): Coder[Future[X], Id[Y]] =
-    a => coder(Await.result(a, Duration.Inf))
-// pureServiceLeftCoder is already provided in poppet.coder.instances.CoderInstances.idCoder
-```
-more examples can be found in `*CoderInstances` traits (for instance `poppet.coder.play.instances.PlayJsonCoderInstances`)
-
-### Error handling
-Development in progress...
 
 ### Examples
 - Http4s: https://github.com/yakivy/poppet/tree/master/example/http4s
