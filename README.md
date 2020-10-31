@@ -15,18 +15,19 @@ Poppet is a minimal, extensible, type-based Scala library for generating RPC ser
     1. [API](#api)
     1. [Provider](#provider)
     1. [Consumer](#consumer)
-1. [Custom kinds](#custom-kinds)
-1. [Error handling](#error-handling)
-1. [Custom logic](#custom-logic)
+1. [Customizations](#customizations)
+    1. [Authentication](#authentication)
+    1. [Error handling](#error-handling)
+1. [Manual calls](#manual-calls)
 1. [Examples](#examples)
 1. [Notes](#notes)
 
 ### Motivation
 
 You may find Poppet useful if you want to...
-- call services across the whole microservice solution with single line of code
+- build and expose API around service traits with several lines of code
 - keep your services sparklingly clean
-- richly customize transferring protocol
+- customize everything around the library 😄
 
 ### Design
 
@@ -41,7 +42,7 @@ Library consists of three main parts: coder, provider and consumer.
 ### Quick start
 Put library version in the build file and add cats dependency, let's assume you are using sbt:
 ```scala
-val poppetVersion = "0.0.1"
+val poppetVersion = "0.1.0"
 
 libraryDependencies += Seq(
     "org.typelevel" %% "cats-core" % catsVersion
@@ -49,7 +50,7 @@ libraryDependencies += Seq(
 ```
 
 #### API
-Define clean service API and share it between provider and consumer services:
+Define clean service trait and share it between provider and consumer services:
 ```scala
 case class User(email: String, firstName: String)
 trait UserService {
@@ -57,17 +58,17 @@ trait UserService {
 }
 ```
 #### Provider
-Add poppet coder and provider dependencies to the build file, as an example I'll take http4s stack:
+Add poppet coder, provider and favourite stack dependencies to the build file, as an example I'll take Play Framework with Circe:
 ```scala
+enablePlugins(PlayScala)
 libraryDependencies += Seq(
+    "io.circe" %% "circe-parser" % circeVersion,
+    "io.circe" %% "circe-generic" % circeVersion,
     "com.github.yakivy" %% "poppet-coder-circe" % poppetVersion,
-    "com.github.yakivy" %% "poppet-provider-play" % poppetVersion,
-    "org.http4s" %% "http4s-circe" % http4sVersion,
-    "org.http4s" %% "http4s-dsl" % http4sVersion,
-    "org.http4s" %% "http4s-blaze-server" % http4sVersion,
+    "com.github.yakivy" %% "poppet-provider" % poppetVersion,
 )
 ```
-Implement API with actual logic:
+Implement service trait with actual logic:
 ```scala
 class UserInternalService extends UserService {
     override def findById(id: String): Future[User] = {
@@ -77,68 +78,72 @@ class UserInternalService extends UserService {
     }
 }
 ```
-Create a provider for service, keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
+Create and materialize a provider for the service (can be materialized once and shared for all incoming calls), keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
 ```scala
 import cats.implicits._
-import poppet.provider.play.all._
-import poppet.coder.play.all._
+import io.circe._
+import io.circe.generic.auto._
+import poppet.coder.circe.all._
+import poppet.provider.all._
 
-def provider(cc: ControllerComponents)(implicit ec: ExecutionContext) = Provider(
-    PlayServer(cc))(
-    PlayCoder())(
+implicit val ec: ExecutionContext = ...
+
+val provider = Provider[Json, Future](
     ProviderProcessor[UserService](new UserInternalService).generate()
-)
+).materialize()
 ```
-Materialize and register provider:  
-**`routes`**
+Register the provider:  
 ```
 POST /api/service controller.ProviderController.apply()
 ```
-**`ProviderController.scala`**  
 ```scala
 @Singleton
 class ProviderController @Inject()(
     cc: ControllerComponents)(implicit ec: ExecutionContext
 ) extends AbstractController(cc) {
-    def apply(): Action[ByteString] = provider(cc).materialize()
+    def apply(): Action[ByteString] = Action.async(cc.parsers.byteString)(request =>
+        provider(request.body.toByteBuffer.array()).map(Ok(_))
+    )
 }
 ```
 
 #### Consumer
-Add play coder and consumer dependencies to the build file, as play consumer is built on play WsClient we will also need it:
+Add poppet coder, consumer and favourite stack dependencies to the build file, as a client I'll take Play WS:
 ```scala
+enablePlugins(PlayScala)
 libraryDependencies += Seq(
-    "com.github.yakivy" %% "poppet-coder-play" % poppetVersion,
-    "com.github.yakivy" %% "poppet-consumer-play" % poppetVersion,
+    "io.circe" %% "circe-parser" % circeVersion,
+    "io.circe" %% "circe-generic" % circeVersion,
+    "com.github.yakivy" %% "poppet-coder-circe" % poppetVersion,
+    "com.github.yakivy" %% "poppet-consumer" % poppetVersion,
     ws
 )
 ```
-Create and materialize consumer for service (can be materialized once and shared everywhere):
+Create and materialize consumer for the service (can be materialized once and shared everywhere):
 ```scala
 import cats.implicits._
-import poppet.coder.play.all._
-import poppet.consumer.play.all._
+import io.circe._
+import io.circe.generic.auto._
+import poppet.coder.circe.all._
+import poppet.consumer.all._
 
-def userService(wsClient: WSClient)(implicit ec: ExecutionContext): UserService = Consumer(
-   PlayClient(s"http://${providerHostName}/api/service")(wsClient))(
-   PlayCoder())(
-   ConsumerProcessor[UserService].generate()
+implicit val ec: ExecutionContext = ...
+
+val client: Client[Future] = request => wsClient.url(
+    s"http://${providerHostName}/api/service"
+).post(request).map(_.bodyAsBytes.toByteBuffer.array())
+
+val userService: UserService = Consumer[Json, Future].apply(
+    client)(ConsumerProcessor[UserService].generate()
 ).materialize()
 ```
-Enjoy :)
+Enjoy 👌
 ```scala
-@Singleton
-class UserController @Inject()(
-    wsClient: WSClient, cc: ControllerComponents)(
-    implicit ec: ExecutionContext
-) extends AbstractController(cc) {
-    def findById(id: String) = Action.async {
-        userService(wsClient).findById(id).map(Ok(_))
-    }
-}
+userService.findById("1")
 ```
 
-### Custom kinds
+### Customizations
+#### Custom kinds
 Out of the box library supports only server data kind as a service return kind (`Future` for play, `Id` for spring and so on). To return custom kind in a service you need to define coders (alias for implicit scala `Function1`) from server kind to that kind:
  ```scala
 implicit def pureServerCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, A[Y]]
@@ -156,10 +161,10 @@ implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, Id[Y]]): Coder[F
 ```
 more examples can be found in `*CoderInstances` traits (for instance `poppet.coder.play.instances.PlayJsonCoderInstances`)
 
-### Error handling
+#### Error handling
 Development in progress...
 
-### Custom logic
+#### Custom logic
 Let's say you want to add simple auth for generated RPC endpoints, you can easily do it with help of decorators. Decorator is an alias for scala function that receives poppet flow as an input and returns decorated flow of the same type.  
 Firstly we need to define header where we want to pass the secret and the secret by itself:
 ```scala
@@ -200,16 +205,18 @@ Provider(
 ).materialize()
 ```
 
+### Manual calls
+
 ### Examples
-- Http4s: https://github.com/yakivy/poppet/tree/master/example/http4s
+- Http4s with Circe: https://github.com/yakivy/poppet/tree/master/example/http4s
     - run provider: `sbt "; project http4sProviderExample; run"`
     - run consumer: `sbt "; project http4sConsumerExample; run"`
     - put `http://localhost:9002/api/user/1` in the address bar
-- Play Framework: https://github.com/yakivy/poppet/tree/master/example/play
+- Play Framework with Play Json: https://github.com/yakivy/poppet/tree/master/example/play
     - run provider: `sbt "; project playProviderExample; run 9001"`
     - run consumer: `sbt "; project playConsumerExample; run 9002"`
     - put `http://localhost:9002/api/user/1` in the address bar
-- And even Spring Framework 😲: https://github.com/yakivy/poppet/tree/master/example/spring
+- And even Spring Framework with Jackson 😲: https://github.com/yakivy/poppet/tree/master/example/spring
     - run provider: `sbt "; project springProviderExample; run"`
     - run consumer: `sbt "; project springConsumerExample; run"`
     - put `http://localhost:9002/api/user/1` in the address bar

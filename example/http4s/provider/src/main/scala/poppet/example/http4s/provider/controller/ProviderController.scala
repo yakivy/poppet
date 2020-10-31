@@ -18,7 +18,7 @@ import scala.concurrent.ExecutionContext.global
 class ProviderController(authSecret: String) {
     implicit val cs = IO.contextShift(global)
 
-    val server = Provider[Json, SR].apply(
+    val provider = Provider[Json, SR].apply(
         ProviderProcessor[UserService](new UserInternalService).generate()
     ).materialize()
 
@@ -26,8 +26,8 @@ class ProviderController(authSecret: String) {
         case request@POST -> Root / "api" / "service" => (for {
             _ <- checkAuth(request)
             byteBody <- EitherT.right[String](request.body.compile.toVector.map(_.toArray))
-            poppetResponse <- server(byteBody)
-        } yield poppetResponse).foldF(InternalServerError(_), Ok(_))
+            response <- provider(byteBody)
+        } yield response).foldF(InternalServerError(_), Ok(_))
     }
 
     def checkAuth(request: Request[IO]): SR[Unit] = {
