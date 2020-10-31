@@ -1,7 +1,11 @@
 package poppet.core
 
-trait ErrorHandler[A, B] extends (A => B)
+trait FunctionWithoutImplicitConversion[A, B] {
+    def apply(a: A): B
+}
 
-trait ModelCoder[A, B] extends (A => B)
+trait ErrorHandler[A] extends FunctionWithoutImplicitConversion[Error, A]
 
-trait ExchangeCoder[A, B] extends (A => B)
+trait ModelCoder[A, B] extends FunctionWithoutImplicitConversion[A, B]
+
+trait ExchangeCoder[A, B] extends FunctionWithoutImplicitConversion[A, B]

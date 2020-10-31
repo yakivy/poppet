@@ -1,7 +1,7 @@
 package poppet
 
 trait CoreDsl {
-    type ErrorHandler[A, B] = core.ErrorHandler[A, B]
+    type ErrorHandler[A] = core.ErrorHandler[A]
     type ModelCoder[A, B] = core.ModelCoder[A, B]
     type ExchangeCoder[A, B] = core.ExchangeCoder[A, B]
     type Error = core.Error

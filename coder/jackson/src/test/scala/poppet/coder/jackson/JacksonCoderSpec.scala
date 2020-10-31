@@ -1,6 +1,5 @@
 package poppet.coder.jackson
 
-import cats.implicits._
 import com.fasterxml.jackson.databind.JsonNode
 import org.scalatest.FreeSpec
 import poppet.coder.CoderFixture

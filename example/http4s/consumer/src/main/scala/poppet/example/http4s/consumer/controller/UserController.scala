@@ -12,6 +12,6 @@ class UserController(userServiceProvider: UserServiceProvider) {
 
     val routes = HttpRoutes.of[IO] {
         case GET -> Root / "api" / "user" / id =>
-            userService.findById(id).flatMap(Ok(_))
+            userService.findById(id).foldF(InternalServerError(_), Ok(_))
     }
 }

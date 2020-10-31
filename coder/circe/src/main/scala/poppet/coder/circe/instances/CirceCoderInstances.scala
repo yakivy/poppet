@@ -1,14 +1,12 @@
 package poppet.coder.circe.instances
 
-import cats.FlatMap
-import cats.Id
+import cats.Applicative
+import cats.Functor
+import cats.Monad
 import cats.implicits._
-import cats.syntax._
 import io.circe.Decoder
-import io.circe.DecodingFailure
 import io.circe.Encoder
 import io.circe.Json
-import io.circe.ParsingFailure
 import io.circe.Printer
 import io.circe.jawn.JawnParser
 import java.nio.ByteBuffer
@@ -22,23 +20,24 @@ trait CirceCoderInstances extends CoderInstances {
         buffer.get(result)
         result
     }
-    implicit def fromBytesExchangeCoder[A, F[_] : FlatMap](
-        implicit mc: ModelCoder[Json, F[A]], eh: ErrorHandler[Either[ParsingFailure, Json], F[Json]]
-    ): ExchangeCoder[Array[Byte], F[A]] = a => eh(Parser.parseByteArray(a)).flatMap(mc)
-    implicit def toBytesExchangeCoder[A, F[_] : FlatMap](
-        implicit mc: ModelCoder[A, F[Json]], eh: ErrorHandler[Array[Byte], F[Array[Byte]]]
+    implicit def fromBytesExchangeCoder[A, F[_] : Monad](
+        implicit mc: ModelCoder[Json, F[A]], eh: ErrorHandler[F[Json]]
+    ): ExchangeCoder[Array[Byte], F[A]] = a => Applicative[F].pure(Parser.parseByteArray(a)).flatMap {
+        case Right(value) => Applicative[F].pure(value)
+        case Left(value) => eh(new Error(value.message, value.underlying))
+    }.flatMap(mc.apply)
+    implicit def toBytesExchangeCoder[A, F[_] : Functor](
+        implicit mc: ModelCoder[A, F[Json]]
     ): ExchangeCoder[A, F[Array[Byte]]] =
-        a => mc(a).flatMap(b => eh(toArray(Printer.noSpaces.printToByteBuffer(b))))
+        a => mc(a).map(b => toArray(Printer.noSpaces.printToByteBuffer(b)))
 
-    implicit def decoderToModelCoder[A, F[_]](
-        implicit eh: ErrorHandler[Either[DecodingFailure, A], F[A]], d: Decoder[A]
-    ): ModelCoder[Json, F[A]] = a => eh(d(a.hcursor))
-    implicit def encoderToModelCoder[A, F[_]](
-        implicit eh: ErrorHandler[Json, F[Json]], e: Encoder[A]
-    ): ModelCoder[A, F[Json]] = a => eh(e(a))
-
-    implicit def idParsingErrorHandler[A]: ErrorHandler[Either[ParsingFailure, A], Id[A]] =
-        _.valueOr(f => throw new Error(f.message, f.underlying))
-    implicit def idDecodingErrorHandler[A]: ErrorHandler[Either[DecodingFailure, A], Id[A]] =
-        _.valueOr(f => throw new Error("Decoding error: ", f))
+    implicit def decoderToModelCoder[A, F[_] : Applicative](
+        implicit d: Decoder[A], eh: ErrorHandler[F[A]]
+    ): ModelCoder[Json, F[A]] = a => d(a.hcursor) match {
+        case Right(value) => Applicative[F].pure(value)
+        case Left(value) => eh(new Error(s"Decoding error: ${value.getMessage()}", value))
+    }
+    implicit def encoderToModelCoder[A, F[_] : Applicative](
+        implicit e: Encoder[A]
+    ): ModelCoder[A, F[Json]] = a => Applicative[F].pure(e(a))
 }

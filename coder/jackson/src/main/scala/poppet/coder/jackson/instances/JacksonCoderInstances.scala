@@ -1,6 +1,7 @@
 package poppet.coder.jackson.instances
 
-import cats.FlatMap
+import cats.Applicative
+import cats.Functor
 import cats.implicits._
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
@@ -23,22 +24,22 @@ trait JacksonCoderInstances extends CoderInstances {
         om
     }
 
-    implicit def fromBytesExchangeCoder[A, F[_] : FlatMap](
-        implicit mc: ModelCoder[JsonNode, F[A]], eh: ErrorHandler[JsonNode, F[JsonNode]]
-    ): ExchangeCoder[Array[Byte], F[A]] = a => eh(om.readTree(a)).flatMap(mc)
-    implicit def toBytesExchangeCoder[A, F[_] : FlatMap](
-        implicit mc: ModelCoder[A, F[JsonNode]], eh: ErrorHandler[Array[Byte], F[Array[Byte]]]
-    ): ExchangeCoder[A, F[Array[Byte]]] = a => mc(a).flatMap(b => eh(om.writeValueAsBytes(b)))
+    implicit def fromBytesExchangeCoder[A, F[_]](
+        implicit mc: ModelCoder[JsonNode, F[A]]
+    ): ExchangeCoder[Array[Byte], F[A]] = a => mc(om.readTree(a))
+    implicit def toBytesExchangeCoder[A, F[_] : Functor](
+        implicit mc: ModelCoder[A, F[JsonNode]]
+    ): ExchangeCoder[A, F[Array[Byte]]] = a => mc(a).map(b => om.writeValueAsBytes(b))
 
-    implicit def toJsonModelCoder[A, F[_]](
-        implicit eh: ErrorHandler[A, F[A]], mc: ModelCoder[JsonNode, A]
-    ): ModelCoder[JsonNode, F[A]] = a => eh(mc(a))
-    implicit def fromJsonModelCoderF[A, F[_]](
-        implicit eh: ErrorHandler[JsonNode, F[JsonNode]], om: ObjectMapper
-    ): ModelCoder[A, F[JsonNode]] = a => eh(om.valueToTree(a))
+    implicit def toJsonModelCoder[A, F[_] : Applicative](
+        implicit mc: ModelCoder[JsonNode, A]
+    ): ModelCoder[JsonNode, F[A]] = a => Applicative[F].pure(mc(a))
+    implicit def fromJsonModelCoderF[A, F[_] : Applicative](
+        implicit om: ObjectMapper
+    ): ModelCoder[A, F[JsonNode]] = a => Applicative[F].pure(om.valueToTree(a))
 
     implicit def fromJsonModelCoder[A](implicit om: ObjectMapper): ModelCoder[JsonNode, A] =
-    macro jsonToAnyCoderImpl[A]
+        macro jsonToAnyCoderImpl[A]
 }
 
 object JacksonCoderInstances {

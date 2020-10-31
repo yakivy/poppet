@@ -25,13 +25,13 @@ class ProviderController @Inject()(
 ) extends AbstractController(cc) {
     private val authSecret = config.get[String]("auth.secret")
 
-    private val server = Provider[JsValue, Future].apply(
-        ProviderProcessor(helloService).generate()
-    ).materialize()
     private val authDecorator: Request[ByteString] => Request[ByteString] = request => {
         if (request.headers.get(Http.HeaderNames.PROXY_AUTHENTICATE).contains(authSecret)) request
         else throw new IllegalArgumentException("Wrong secret!")
     }
+    private val server = Provider[JsValue, Future].apply(
+        ProviderProcessor(helloService).generate()
+    ).materialize()
 
     def apply(): Action[ByteString] = Action.async(cc.parsers.byteString)(request =>
         server(authDecorator(request).body.toByteBuffer.array()).map(Ok(_))

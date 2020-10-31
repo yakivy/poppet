@@ -7,6 +7,7 @@ import scala.concurrent.Future
 class UserInternalService extends UserService {
     override def findById(id: String): Future[User] = {
         //emulation of business logic
-        Future.successful(User(id, "Antony"))
+        if (id == "1") Future.successful(User(id, "Antony"))
+        else Future.failed(new IllegalArgumentException("User is not found"))
     }
 }

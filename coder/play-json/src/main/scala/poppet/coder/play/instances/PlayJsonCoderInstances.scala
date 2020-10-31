@@ -1,15 +1,14 @@
 package poppet.coder.play.instances
 
-import cats.FlatMap
-import cats.Id
+import cats.Applicative
+import cats.Functor
+import cats.Monad
 import cats.implicits._
 import play.api.libs.json.Format
 import play.api.libs.json.JsObject
-import play.api.libs.json.JsPath
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import play.api.libs.json.JsonValidationError
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
 import poppet.all._
@@ -21,20 +20,20 @@ trait PlayJsonCoderInstances extends CoderInstances {
     implicit val rqFormat: Format[Request[JsValue]] = Json.format[Request[JsValue]]
     implicit val rsFormat: Format[Response[JsValue]] = Json.format[Response[JsValue]]
 
-    implicit def fromBytesExchangeCoder[A, F[_] : FlatMap](
-        implicit mc: ModelCoder[JsValue, F[A]], eh: ErrorHandler[JsValue, F[JsValue]]
-    ): ExchangeCoder[Array[Byte], F[A]] = a => eh(Json.parse(a)).flatMap(mc)
-    implicit def toBytesExchangeCoder[A, F[_] : FlatMap](
-        implicit mc: ModelCoder[A, F[JsValue]], eh: ErrorHandler[Array[Byte], F[Array[Byte]]]
-    ): ExchangeCoder[A, F[Array[Byte]]] = a => mc(a).flatMap(b => eh(Json.toBytes(b)))
+    implicit def fromBytesExchangeCoder[A, F[_]](
+        implicit mc: ModelCoder[JsValue, F[A]]
+    ): ExchangeCoder[Array[Byte], F[A]] = a => mc.apply(Json.parse(a))
+    implicit def toBytesExchangeCoder[A, F[_] : Functor](
+        implicit mc: ModelCoder[A, F[JsValue]]
+    ): ExchangeCoder[A, F[Array[Byte]]] = a => mc(a).map(Json.toBytes)
 
-    implicit def readsToModelCoder[A, F[_]](
-        implicit eh: ErrorHandler[Either[Seq[(JsPath, Seq[JsonValidationError])], A], F[A]], r: Reads[A]
-    ): ModelCoder[JsValue, F[A]] = a => eh(r.reads(a).asEither)
-    implicit def writesToModelCoder[A, F[_]](
-        implicit eh: ErrorHandler[JsValue, F[JsValue]], w: Writes[A]
-    ): ModelCoder[A, F[JsValue]] = a => eh(w.writes(a))
-
-    implicit def idErrorHandler[A]: ErrorHandler[Either[Seq[(JsPath, Seq[JsonValidationError])], A], Id[A]] =
-        _.valueOr(f => throw new Error(s"Decoding error: $f"))
+    implicit def readsToModelCoder[A, F[_] : Monad](
+        implicit r: Reads[A], eh: ErrorHandler[F[A]]
+    ): ModelCoder[JsValue, F[A]] = a => Monad[F].pure(r.reads(a).asEither).flatMap {
+        case Right(value) => Monad[F].pure(value)
+        case Left(value) => eh(new Error(s"Can't parse model: $value"))
+    }
+    implicit def writesToModelCoder[A, F[_] : Applicative](
+        implicit w: Writes[A]
+    ): ModelCoder[A, F[JsValue]] = a => Applicative[F].pure(w.writes(a))
 }

@@ -67,16 +67,6 @@ lazy val coder = project.in(file("coder/core"))
     .settings(publishingSettings: _*)
     .settings(commonDependencies: _*)
 
-lazy val catsEffectCoder = project.in(file("coder/cats-effect"))
-    .settings(name := "poppet-coder-cats-effect")
-    .settings(commonSettings: _*)
-    .settings(publishingSettings: _*)
-    .settings(commonDependencies: _*)
-    .settings(libraryDependencies ++= Seq(
-        "org.typelevel" %% "cats-effect" % versions.cats % "test,provided",
-    ))
-    .dependsOn(coder % "compile->compile;test->test")
-
 lazy val circeCoder = project.in(file("coder/circe"))
     .settings(name := "poppet-coder-circe")
     .settings(commonSettings: _*)
@@ -130,7 +120,10 @@ lazy val http4sApiExample = project.in(file("example/http4s/api"))
     .settings(publish / skip := true)
     .settings(libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-effect" % versions.cats,
+        "io.circe" %% "circe-parser" % versions.circe,
+        "io.circe" %% "circe-generic" % versions.circe,
     ))
+    .dependsOn(circeCoder)
 
 lazy val http4sProviderExample = project.in(file("example/http4s/provider"))
     .settings(name := "poppet-provider-http4s-example")
@@ -138,13 +131,12 @@ lazy val http4sProviderExample = project.in(file("example/http4s/provider"))
     .settings(publishingSettings: _*)
     .settings(publish / skip := true)
     .settings(libraryDependencies ++= Seq(
-        "io.circe" %% "circe-generic" % versions.circe,
         "org.http4s" %% "http4s-circe" % versions.http4s,
         "org.http4s" %% "http4s-dsl" % versions.http4s,
         "org.http4s" %% "http4s-blaze-server" % versions.http4s,
         "ch.qos.logback" % "logback-classic" % versions.logback,
     ))
-    .dependsOn(circeCoder, catsEffectCoder, provider, http4sApiExample)
+    .dependsOn(circeCoder, provider, http4sApiExample)
 
 lazy val http4sConsumerExample = project.in(file("example/http4s/consumer"))
     .settings(name := "poppet-consumer-http4s-example")
@@ -152,14 +144,13 @@ lazy val http4sConsumerExample = project.in(file("example/http4s/consumer"))
     .settings(publishingSettings: _*)
     .settings(publish / skip := true)
     .settings(libraryDependencies ++= Seq(
-        "io.circe" %% "circe-generic" % versions.circe,
         "org.http4s" %% "http4s-circe" % versions.http4s,
         "org.http4s" %% "http4s-dsl" % versions.http4s,
         "org.http4s" %% "http4s-blaze-server" % versions.http4s,
         "org.http4s" %% "http4s-blaze-client" % versions.http4s,
         "ch.qos.logback" % "logback-classic" % versions.logback,
     ))
-    .dependsOn(circeCoder, catsEffectCoder, consumer, http4sApiExample)
+    .dependsOn(circeCoder, consumer, http4sApiExample)
 
 lazy val playApiExample = project.in(file("example/play/api"))
     .settings(name := "poppet-api-play-example")

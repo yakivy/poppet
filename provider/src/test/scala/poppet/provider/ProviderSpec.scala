@@ -2,10 +2,7 @@ package poppet.provider
 
 import cats.Id
 import org.scalatest.FreeSpec
-import poppet.core.ModelCoder
-import poppet.core.ExchangeCoder
-import poppet.core.Request
-import poppet.core.Response
+import poppet.all._
 import poppet.provider.core.MethodProcessor
 
 class ProviderSpec extends FreeSpec {
@@ -17,6 +14,7 @@ class ProviderSpec extends FreeSpec {
             }
         implicit val bscoder: ExchangeCoder[Response[String], Array[Byte]] =
             a => a.value.getBytes
+        implicit val eh: ErrorHandler[MethodProcessor[String, Id]] = throw _
         val c = Provider[String, Id].apply(
             new ProviderProcessor[String, Id]("A", List(new MethodProcessor[String, Id](
                 "a", List("p0"), request => request("p0") + " response"

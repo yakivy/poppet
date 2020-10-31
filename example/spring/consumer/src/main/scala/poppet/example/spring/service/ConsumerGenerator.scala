@@ -23,10 +23,8 @@ object ConsumerGenerator {
 
     def userService(
         restTemplate: RestTemplate)(url: String, authSecret: String
-    ): UserService = {
-        Consumer[JsonNode, Id].apply(
-            client(restTemplate)(url, authSecret))(
-            ConsumerProcessor[UserService].generate()
-        ).materialize()
-    }
+    ): UserService = Consumer[JsonNode, Id].apply(
+        client(restTemplate)(url, authSecret))(
+        ConsumerProcessor[UserService].generate()
+    ).materialize()
 }

@@ -7,6 +7,8 @@ import poppet.example.spring.model.User;
 public class UserInternalService implements UserService {
     @Override
     public User findById(String id) {
-        return new User(id, "Antony");
+        //emulation of business logic
+        if("1".equals(id)) return new User(id, "Antony");
+        else throw new IllegalArgumentException("User is not found");
     }
 }
