@@ -27,20 +27,20 @@ Poppet is a minimal, extensible, type-based Scala library for generating RPC ser
 You may find Poppet useful if you want to...
 - build and expose API around service traits with several lines of code
 - keep your services sparklingly clean
-- customize everything around the library 😄
+- customize everything around 😄
 
 ### Design
 
 Library consists of three main parts: coder, provider and consumer.
 
-`Coder` is responsible for converting low level interaction data type (mainly `Array[Byte]`) into models. Coders on provider and consumer sides should be compatible (generate same intermediate data for same models). OOTB supported coders: `circe`, `play-json`, `jackson`  
+`Coder` is responsible for converting low level interaction data type (`Array[Byte]`) into the models. Coders on provider and consumer sides should be compatible (generate same interaction data for same models). OOTB coders: `circe`, `play-json`, `jackson`  
 
-`Provider` is responsible for converting consumer requests to service calls, as a materialization result returns request-response function that needs to be exposed for consumer. 
+`Provider` is responsible for converting consumer requests to service calls, as a materialization result returns request-response function that needs to be exposed for the consumer. 
 
-`Consumer` is responsible for proxying calls from service to provider endpoints, as a materialization result returns the fully functional instance of given trait.
+`Consumer` is responsible for proxying calls from service to provider endpoints, as a materialization result returns the fully functioning instance of the given trait.
 
 ### Quick start
-Put library version in the build file and add cats dependency, let's assume you are using sbt:
+Put a library version in the build file and add cats dependency, let's assume you are using SBT:
 ```scala
 val poppetVersion = "0.1.0"
 
@@ -206,6 +206,27 @@ Provider(
 ```
 
 ### Manual calls
+You also can to use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request for json-like coder:
+```
+{
+    "service": "poppet.UserService", //full class name of the service
+    "method": "findById", //method name
+    "arguments": {
+        "id": "1" //argument name: encoded value
+    }
+}
+```
+so cURL call will look like:
+```
+curl --location --request POST 'http://${providerHostName}/api/service' \
+--data-raw '{
+    "service": "poppet.UserService",
+    "method": "findById",
+    "arguments": {
+        "id": "1"
+    }
+}'
+```
 
 ### Examples
 - Http4s with Circe: https://github.com/yakivy/poppet/tree/master/example/http4s

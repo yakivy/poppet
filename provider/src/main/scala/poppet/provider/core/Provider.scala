@@ -27,6 +27,10 @@ class Provider[I, F[_] : Monad](
             ).toMap
         ).toMap
     require(
+        processors.forall(_.methods.nonEmpty),
+        "Some of the passed processors have no methods. Are you sure that you passed correct generic parameter during processor generation?"
+    )
+    require(
         processors.toList.flatMap(_.methods).size ==
             indexedProcessors.values.flatMap(_.values).flatMap(_.values).size,
         "Please use unique parameter name lists for overloaded methods."
