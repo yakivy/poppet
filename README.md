@@ -145,7 +145,7 @@ userService.findById("1")
 The library is build on following abstractions:
 - `[I, F[_]]` - probably the first two letters that you saw in the poppet. `I` - is an intermediate data type what your coding framework is working with, can be any serialization format, but it would be easier to choose from [here](https://github.com/yakivy/poppet/tree/master/coder), because they come with a bunch of predefined coders. `F` - is your service data kind, can be any monad (has `cats.Monad` typeclass);
 - `poppet.provider.Server`/`poppet.consumer.Client` - used for data transferring, technically they are just the functions from bytes to bytes lifted to passed data kind (`Array[Byte] => F[Array[Byte]]`). So you can use anything as long as it can receive/pass an array of bytes (for more info you can check the [examples](#examples), all of them were build on different web frameworks) and decorate it as you wish (example with authentication is [here](#authentication));
-- `poppet.ExchangeCoder`/`poppet.ModelCoder` - used for coding bytes to intermediate format/intermediate format to models. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of `poppet-coder-*` modules, where you hopefully will find your favourite coder. If it is not there, you can always try to write your own by providing 4 basic implicits like in `poppet.coder.circe.instances.CirceCoderInstances`;
+- `poppet.ExchangeCoder`/`poppet.ModelCoder` - used for coding bytes to intermediate format/intermediate format to models. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of `poppet-coder-*` modules, where you hopefully will find a favourite coder. If it is not there, you can always try to write your own by providing 4 basic implicits like in `poppet.coder.circe.instances.CirceCoderInstances`;
 - `poppet.FailureHandler` - used for handling failures, more info you can find [here](#failure-handling).
 
 #### Authentication
@@ -175,7 +175,7 @@ All meaningful failures that can appear in the library are being transformed int
 ```
 type FailureHandler[A] = Failure => A
 ```
-by default throwing failure handler is being resolved:
+by default, throwing failure handler is being resolved:
 ```
 implicit def throwingFailureHandler[A]: FailureHandler[A] = throw _
 ```
