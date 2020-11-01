@@ -21,10 +21,10 @@ trait CirceCoderInstances extends CoderInstances {
         result
     }
     implicit def fromBytesExchangeCoder[A, F[_] : Monad](
-        implicit mc: ModelCoder[Json, F[A]], eh: ErrorHandler[F[Json]]
+        implicit mc: ModelCoder[Json, F[A]], fh: FailureHandler[F[Json]]
     ): ExchangeCoder[Array[Byte], F[A]] = a => Applicative[F].pure(Parser.parseByteArray(a)).flatMap {
         case Right(value) => Applicative[F].pure(value)
-        case Left(value) => eh(new Error(value.message, value.underlying))
+        case Left(value) => fh(new Failure(value.message, value.underlying))
     }.flatMap(mc.apply)
     implicit def toBytesExchangeCoder[A, F[_] : Functor](
         implicit mc: ModelCoder[A, F[Json]]
@@ -32,10 +32,10 @@ trait CirceCoderInstances extends CoderInstances {
         a => mc(a).map(b => toArray(Printer.noSpaces.printToByteBuffer(b)))
 
     implicit def decoderToModelCoder[A, F[_] : Applicative](
-        implicit d: Decoder[A], eh: ErrorHandler[F[A]]
+        implicit d: Decoder[A], fh: FailureHandler[F[A]]
     ): ModelCoder[Json, F[A]] = a => d(a.hcursor) match {
         case Right(value) => Applicative[F].pure(value)
-        case Left(value) => eh(new Error(s"Decoding error: ${value.getMessage()}", value))
+        case Left(value) => fh(new Failure(s"Decoding error: ${value.getMessage()}", value))
     }
     implicit def encoderToModelCoder[A, F[_] : Applicative](
         implicit e: Encoder[A]

@@ -14,7 +14,7 @@ class ProviderSpec extends FreeSpec {
             }
         implicit val bscoder: ExchangeCoder[Response[String], Array[Byte]] =
             a => a.value.getBytes
-        implicit val eh: ErrorHandler[MethodProcessor[String, Id]] = throw _
+        implicit val fh: FailureHandler[MethodProcessor[String, Id]] = throw _
         val c = Provider[String, Id].apply(
             new ProviderProcessor[String, Id]("A", List(new MethodProcessor[String, Id](
                 "a", List("p0"), request => request("p0") + " response"

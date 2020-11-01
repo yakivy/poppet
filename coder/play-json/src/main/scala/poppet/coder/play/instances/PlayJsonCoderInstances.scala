@@ -28,10 +28,10 @@ trait PlayJsonCoderInstances extends CoderInstances {
     ): ExchangeCoder[A, F[Array[Byte]]] = a => mc(a).map(Json.toBytes)
 
     implicit def readsToModelCoder[A, F[_] : Monad](
-        implicit r: Reads[A], eh: ErrorHandler[F[A]]
+        implicit r: Reads[A], fh: FailureHandler[F[A]]
     ): ModelCoder[JsValue, F[A]] = a => Monad[F].pure(r.reads(a).asEither).flatMap {
         case Right(value) => Monad[F].pure(value)
-        case Left(value) => eh(new Error(s"Can't parse model: $value"))
+        case Left(value) => fh(new Failure(s"Can't parse model: $value"))
     }
     implicit def writesToModelCoder[A, F[_] : Applicative](
         implicit w: Writes[A]

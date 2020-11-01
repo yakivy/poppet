@@ -4,7 +4,7 @@ trait FunctionWithoutImplicitConversion[A, B] {
     def apply(a: A): B
 }
 
-trait ErrorHandler[A] extends FunctionWithoutImplicitConversion[Error, A]
+trait FailureHandler[A] extends FunctionWithoutImplicitConversion[Failure, A]
 
 trait ModelCoder[A, B] extends FunctionWithoutImplicitConversion[A, B]
 

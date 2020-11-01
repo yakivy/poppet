@@ -17,23 +17,22 @@ Poppet is a minimal, extensible, type-based Scala library for generating RPC ser
     1. [Consumer](#consumer)
 1. [Customizations](#customizations)
     1. [Authentication](#authentication)
-    1. [Error handling](#error-handling)
+    1. [Failure handling](#failure-handling)
 1. [Manual calls](#manual-calls)
 1. [Examples](#examples)
-1. [Notes](#notes)
 
 ### Motivation
 
 You may find Poppet useful if you want to...
-- build and expose API around service traits with several lines of code
-- keep your services sparklingly clean
-- customize everything around 😄
+- automate an RPC services generation from the service traits with several lines of code
+- keep your services sparkling clean
+- customize almost every piece of the library you are using 😄
 
 ### Design
 
 Library consists of three main parts: coder, provider and consumer.
 
-`Coder` is responsible for converting low level interaction data type (`Array[Byte]`) into the models. Coders on provider and consumer sides should be compatible (generate same interaction data for same models). OOTB coders: `circe`, `play-json`, `jackson`  
+`Coder` is responsible for converting low level interaction data type (`Array[Byte]`) into the models. Coders on the provider and consumer sides should be compatible (generate same interaction data for same models). Out of the box coders: `circe`, `play-json`, `jackson`  
 
 `Provider` is responsible for converting consumer requests to service calls, as a materialization result returns request-response function that needs to be exposed for the consumer. 
 
@@ -97,8 +96,7 @@ Register the provider:
 POST /api/service controller.ProviderController.apply()
 ```
 ```scala
-@Singleton
-class ProviderController @Inject()(
+class ProviderController(
     cc: ControllerComponents)(implicit ec: ExecutionContext
 ) extends AbstractController(cc) {
     def apply(): Action[ByteString] = Action.async(cc.parsers.byteString)(request =>
@@ -128,12 +126,13 @@ import poppet.coder.circe.all._
 import poppet.consumer.all._
 
 implicit val ec: ExecutionContext = ...
+val wsClient: WSClient = ...
 
 val client: Client[Future] = request => wsClient.url(
     s"http://${providerHostName}/api/service"
 ).post(request).map(_.bodyAsBytes.toByteBuffer.array())
 
-val userService: UserService = Consumer[Json, Future].apply(
+val userService: UserService = Consumer[Json, Future](
     client)(ConsumerProcessor[UserService].generate()
 ).materialize()
 ```
@@ -143,70 +142,51 @@ userService.findById("1")
 ```
 
 ### Customizations
-#### Custom kinds
-Out of the box library supports only server data kind as a service return kind (`Future` for play, `Id` for spring and so on). To return custom kind in a service you need to define coders (alias for implicit scala `Function1`) from server kind to that kind:
- ```scala
-implicit def pureServerCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, A[Y]]
-implicit def pureServiceCoder[X, Y](implicit coder: Coder[X, Y]): Coder[X, B[Y]]
-implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, B[Y]]): Coder[A[X], B[Y]]
-implicit def pureServiceLeftCoder[X, Y](implicit coder: Coder[X, A[Y]]): Coder[B[X], A[Y]]
-```
-For example, to be able to return `Id` kind from service that is being provided or consumed by play framework, you need coders from `Future` to `Id`:
-```scala
-// pureServerCoder is already provided in poppet.coder.instances.CoderInstances.coderToFutureCoder
-// pureServiceCoder is already provided in poppet.coder.instances.CoderInstances.idCoder
-implicit def pureServerLeftCoder[X, Y](implicit coder: Coder[X, Id[Y]]): Coder[Future[X], Id[Y]] =
-    a => coder(Await.result(a, Duration.Inf))
-// pureServiceLeftCoder is already provided in poppet.coder.instances.CoderInstances.idCoder
-```
-more examples can be found in `*CoderInstances` traits (for instance `poppet.coder.play.instances.PlayJsonCoderInstances`)
+The library is build on following abstractions:
+- `poppet.provider.Server`/`poppet.consumer.Client` - used for data transferring, technically they are only the functions from bytes to bytes lifted to passed kind (`Array[Byte] => F[Array[Byte]]`). So you can use anything as long as it can receive/pass an array of bytes (for more information you can check the [examples](#examples), all of them were build on different web frameworks) and decorate it as you wish (example with authentication is [here](#authentication));
+- `poppet.ExchangeCoder`/`poppet.ModelCoder` - used for coding bytes to intermediate format/intermediate format to models. Probably the most complicated technique in the library because it is heavily utilizing implicits, that's why poppet comes with a bunch of `poppet-coder-*` modules, where you hopefully can find your favourite coder. But if it is not there, you can always try to write your own by providing 4 basic implicits like in `poppet.coder.circe.instances.CirceCoderInstances`;
+- `poppet.FailureHandler` - used for handling failures, more info you can find [here](#failure-handling)
 
-#### Error handling
-Development in progress...
-
-#### Custom logic
-Let's say you want to add simple auth for generated RPC endpoints, you can easily do it with help of decorators. Decorator is an alias for scala function that receives poppet flow as an input and returns decorated flow of the same type.  
-Firstly we need to define header where we want to pass the secret and the secret by itself:
-```scala
-val authHeader = "auth"
-val authSecret = "my-secret"
+#### Authentication
+As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's write the method that will check `Authorization` header from the request on provider side, as an example I'll take Play Framework:
 ```
-Then we can create client decorator that will add auth header in all client requests (example is for `play-ws` consumer):
-```scala
-val consumerAuthDecorator = new Decorator[WSRequest, WSResponse, Future] {
-    override def apply(chain: WSRequest => Future[WSResponse]): WSRequest => Future[WSResponse] =
-        ((_: WSRequest).addHttpHeaders(authHeader -> authSecret)).andThen(chain)
+private def checkAuth(request: Request[ByteString]): Request[ByteString] = {
+    if (request.headers.get(Http.HeaderNames.PROXY_AUTHENTICATE).contains(authSecret)) request
+    else throw new IllegalArgumentException("Wrong secret!")
 }
 ```
-register it in the consumer:
-```scala
-Consumer(
-    PlayWsClient(providerUrl)(wsClient), List(authDecorator))(
-    PlayJsonCoder())(
-    ConsumerProcessor[UserService].generate()
-).materialize()
+and integrate it into the poppet endpoint like:
 ```
-And finally check if auth header is present in all server requests with server decorator:
-```scala
-val producerAuthDecorator = new Decorator[Request[ByteString], Result, Future] {
-    override def apply(chain: Request[ByteString] => Future[Result]): Request[ByteString] => Future[Result] =
-        ((rq: Request[ByteString]) => {
-            if (!rq.headers.get(authHeader).contains(authSecret))
-                throw new IllegalArgumentException("Wrong secret!")
-            else rq
-        }).andThen(chain)
-}
+def apply(): Action[ByteString] = Action.async(cc.parsers.byteString)(request =>
+    provider(checkAuth(request).body.toByteBuffer.array()).map(Ok(_))
+)
 ```
-```scala
-Provider(
-    PlayServer(cc), List(producerAuthDecorator))(
-    PlayJsonCoder())(
-    ProviderProcessor(helloService).generate()
-).materialize()
+so the original goal is already reached, the only thing that left is to pass `Authorisation` header from the consumer. To this end, you can easily modify the consumer client:
 ```
+private val client: Client[Future] = request => wsClient.url(url)
+    .withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> authSecret)
+    .post(request).map(_.bodyAsBytes.toByteBuffer.array())
+```
+For more information you can check the [examples](#examples), all of them have simple authentication build on the same approach.
+
+#### Failure handling
+All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple function from failure to result:
+```
+type FailureHandler[A] = Failure => A
+```
+by default throwing failure handler is being resolved:
+```
+implicit def throwingFailureHandler[A]: FailureHandler[A] = throw _
+```
+so if your don't want to deal with JVM exceptions, you can provide your own instance of failure handler. Let's assume you want to pack a failure with `EitherT[Future, String, A]` kind, then failure handler can look like:
+```
+type SR[A] = EitherT[Future, String, A]
+implicit def fh[A]: FailureHandler[SR[A]] = a => EitherT.leftT(a.getMessage)
+```
+For more information you can check [Http4s with Circe](#examples) example project, it is build around `EitherT[IO, String, A]` kind.
 
 ### Manual calls
-You also can to use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request for json-like coder:
+You also can to use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request body for json-like coder:
 ```
 {
     "service": "poppet.UserService", //full class name of the service
@@ -241,6 +221,3 @@ curl --location --request POST 'http://${providerHostName}/api/service' \
     - run provider: `sbt "; project springProviderExample; run"`
     - run consumer: `sbt "; project springConsumerExample; run"`
     - put `http://localhost:9002/api/user/1` in the address bar
-
-### Notes
-Library is in active development and initial version is not completed yet.

@@ -18,7 +18,7 @@ class Provider[I, F[_] : Monad](
     processors: NonEmptyList[ProviderProcessor[I, F]])(
     implicit iqcoder: ExchangeCoder[Array[Byte], F[Request[I]]],
     bscoder: ExchangeCoder[Response[I], F[Array[Byte]]],
-    eh: ErrorHandler[F[MethodProcessor[I, F]]]
+    fh: FailureHandler[F[MethodProcessor[I, F]]]
 ) {
     private val indexedProcessors: Map[String, Map[String, Map[String, MethodProcessor[I, F]]]] =
         processors.toList.groupBy(_.service).mapValues(
@@ -43,7 +43,7 @@ class Provider[I, F[_] : Monad](
                 .flatMap(_.get(request.arguments.keys.toList.sorted.mkString(",")))
         ).flatMap {
             case Some(value) => Applicative[F].pure(value)
-            case None => eh(new Error(
+            case None => fh(new Failure(
                 "Can't find processor. Make sure that your service is provided and up to date."
             ))
         }
@@ -66,7 +66,7 @@ object Provider {
             implicit FM: Monad[F],
             iqcoder: ExchangeCoder[Array[Byte], F[Request[I]]],
             bscoder: ExchangeCoder[Response[I], F[Array[Byte]]],
-            eh: ErrorHandler[F[MethodProcessor[I, F]]],
+            fh: FailureHandler[F[MethodProcessor[I, F]]],
         ): Provider[I, F] = new Provider(NonEmptyList(processor, rest.toList))
     }
 }
