@@ -143,9 +143,9 @@ userService.findById("1")
 
 ### Customizations
 The library is build on following abstractions:
-- `[I, F[_]]` - probably the first two letters that you saw in the poppet. `I` - is an intermediate data type what your coding framework is working with, can be any serialization format, but it will be easier to choose from [here](https://github.com/yakivy/poppet/tree/master/coder) because they come with a bunch of predefined coders. `F` - is your service data kind, can be anything as long as it has a `cats.Monad` typeclass;
-- `poppet.provider.Server`/`poppet.consumer.Client` - used for data transferring, technically they are only the functions from bytes to bytes lifted to passed kind (`Array[Byte] => F[Array[Byte]]`). So you can use anything as long as it can receive/pass an array of bytes (for more information you can check the [examples](#examples), all of them were build on different web frameworks) and decorate it as you wish (example with authentication is [here](#authentication));
-- `poppet.ExchangeCoder`/`poppet.ModelCoder` - used for coding bytes to intermediate format/intermediate format to models. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of `poppet-coder-*` modules, where you hopefully can find your favourite coder. But if it is not there, you can always try to write your own by providing 4 basic implicits like in `poppet.coder.circe.instances.CirceCoderInstances`;
+- `[I, F[_]]` - probably the first two letters that you saw in the poppet. `I` - is an intermediate data type what your coding framework is working with, can be any serialization format, but it would be easier to choose from [here](https://github.com/yakivy/poppet/tree/master/coder), because they come with a bunch of predefined coders. `F` - is your service data kind, can be any monad (has `cats.Monad` typeclass);
+- `poppet.provider.Server`/`poppet.consumer.Client` - used for data transferring, technically they are just the functions from bytes to bytes lifted to passed data kind (`Array[Byte] => F[Array[Byte]]`). So you can use anything as long as it can receive/pass an array of bytes (for more info you can check the [examples](#examples), all of them were build on different web frameworks) and decorate it as you wish (example with authentication is [here](#authentication));
+- `poppet.ExchangeCoder`/`poppet.ModelCoder` - used for coding bytes to intermediate format/intermediate format to models. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of `poppet-coder-*` modules, where you hopefully will find your favourite coder. If it is not there, you can always try to write your own by providing 4 basic implicits like in `poppet.coder.circe.instances.CirceCoderInstances`;
 - `poppet.FailureHandler` - used for handling failures, more info you can find [here](#failure-handling).
 
 #### Authentication
@@ -168,7 +168,7 @@ private val client: Client[Future] = request => wsClient.url(url)
     .withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> authSecret)
     .post(request).map(_.bodyAsBytes.toByteBuffer.array())
 ```
-For more information you can check the [examples](#examples), all of them have simple authentication build on the same approach.
+For more info you can check the [examples](#examples), all of them have simple authentication build on the same approach.
 
 #### Failure handling
 All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple function from failure to result:
@@ -184,7 +184,7 @@ so if your don't want to deal with JVM exceptions, you can provide your own inst
 type SR[A] = EitherT[Future, String, A]
 implicit def fh[A]: FailureHandler[SR[A]] = a => EitherT.leftT(a.getMessage)
 ```
-For more information you can check [Http4s with Circe](#examples) example project, it is build around `EitherT[IO, String, A]` kind.
+For more info you can check [Http4s with Circe](#examples) example project, it is build around `EitherT[IO, String, A]` kind.
 
 ### Manual calls
 You also can to use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request body for json-like coder:
