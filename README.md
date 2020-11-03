@@ -10,7 +10,6 @@ Poppet is a minimal, extensible, type safe Scala library for generating RPC serv
 
 ### Table of contents
 1. [Motivation](#motivation)
-1. [Design](#design)
 1. [Quick start](#quick-start)
     1. [API](#api)
     1. [Provider](#provider)
@@ -185,7 +184,7 @@ implicit def fh[A]: FailureHandler[SR[A]] = a => EitherT.leftT(a.getMessage)
 For more info you can check [Http4s with Circe](#examples) example project, it is build around `EitherT[IO, String, A]` kind.
 
 ### Manual calls
-You also can to use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request body for json-like coder:
+If your coder has a human readable format (JSON for example), you can use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request body:
 ```
 {
     "service": "poppet.UserService", //full class name of the service
@@ -195,9 +194,9 @@ You also can to use a provider without consumer (mostly for debug purposes) by g
     }
 }
 ```
-so cURL call will look like:
+so cURL call can look like:
 ```
-curl --location --request POST 'http://${providerHostName}/api/service' \
+curl --location --request POST '${providerUrl}' \
 --data-raw '{
     "service": "poppet.UserService",
     "method": "findById",
