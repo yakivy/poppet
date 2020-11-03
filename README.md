@@ -28,15 +28,12 @@ You may find Poppet useful if you want to...
 - keep your services sparkling clean
 - customize almost every piece of the library you are using 😄
 
-### Design
-
-Library consists of three main parts: coder, provider and consumer.
-
-`Coder` is responsible for converting low level interaction data type (`Array[Byte]`) into the models. Coders on the provider and consumer sides should be compatible (generate same interaction data for same models). Out of the box coders: `circe`, `play-json`, `jackson`  
-
-`Provider` is responsible for converting consumer requests to service calls, as a materialization result returns request-response function that needs to be exposed for the consumer. 
-
-`Consumer` is responsible for proxying calls from service to provider endpoints, as a materialization result returns the fully functioning instance of the given trait.
+Essential differences from [autowire](https://github.com/lihaoyi/autowire):
+- no explicit macro application `.call`, result of a consumer is the original trait
+- no hardcoded return kind `Future`, you can specify any monad (has `cats.Monad` typeclass);
+- no forced coder dependencies `uPickle`, you can specify any arbitrary serialization format;
+- robust error handling mechanism;
+- cleaner macros logic (~50 lines in comparison to ~300).
 
 ### Quick start
 Put a library version in the build file and add cats dependency, let's assume you are using SBT:
@@ -143,7 +140,8 @@ userService.findById("1")
 
 ### Customizations
 The library is build on following abstractions:
-- `[I, F[_]]` - probably the first two letters that you saw in the poppet. `I` - is an intermediate data type what your coding framework is working with, can be any serialization format, but it would be easier to choose from [here](https://github.com/yakivy/poppet/tree/master/coder), because they come with a bunch of predefined coders. `F` - is your service data kind, can be any monad (has `cats.Monad` typeclass);
+- `[I]` - is an intermediate data type what your coding framework is working with, can be any serialization format, but it would be easier to choose from existed coder modules, because they come with a bunch of predefined coders;
+- `[F[_]]` - is your service data kind, can be any monad (has `cats.Monad` typeclass);
 - `poppet.provider.Server`/`poppet.consumer.Client` - used for data transferring, technically they are just the functions from bytes to bytes lifted to passed data kind (`Array[Byte] => F[Array[Byte]]`). So you can use anything as long as it can receive/pass an array of bytes (for more info you can check the [examples](#examples), all of them were build on different web frameworks) and decorate it as you wish (example with authentication is [here](#authentication));
 - `poppet.ExchangeCoder`/`poppet.ModelCoder` - used for coding bytes to intermediate format/intermediate format to models. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of `poppet-coder-*` modules, where you hopefully will find a favourite coder. If it is not there, you can always try to write your own by providing 4 basic implicits like in `poppet.coder.circe.instances.CirceCoderInstances`;
 - `poppet.FailureHandler` - used for handling failures, more info you can find [here](#failure-handling).
