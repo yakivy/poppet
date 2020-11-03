@@ -149,7 +149,7 @@ The library is build on following abstractions:
 - `poppet.FailureHandler` - used for handling failures, more info you can find [here](#failure-handling).
 
 #### Authentication
-As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's write the method that will check `Authorization` header from the request on provider side, as an example I'll take Play Framework:
+As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's write the method that will check authorization header from the request on provider side, as an example I'll take Play Framework:
 ```
 private def checkAuth(request: Request[ByteString]): Request[ByteString] = {
     if (request.headers.get(Http.HeaderNames.PROXY_AUTHENTICATE).contains(authSecret)) request
@@ -162,7 +162,7 @@ def apply(): Action[ByteString] = Action.async(cc.parsers.byteString)(request =>
     provider(checkAuth(request).body.toByteBuffer.array()).map(Ok(_))
 )
 ```
-so the original goal is already reached, the only thing that left is to pass `Authorisation` header from the consumer. To this end, you can easily modify the consumer client:
+so the original goal is already reached, the only thing that left is to pass authorization header from the consumer. To this end, you can easily modify the consumer client:
 ```
 private val client: Client[Future] = request => wsClient.url(url)
     .withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> authSecret)

@@ -26,9 +26,10 @@ class UserServiceProvider @Inject()(
 ) extends Provider[UserService] {
     private val authSecret = config.get[String]("auth.secret")
     private val url = config.get[String]("consumer.url")
-    private val client: Client[Future] =
+
+    private val client: Client[JsValue, Future] =
         request => wsClient.url(url).withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> authSecret)
-            .post(request).map(_.bodyAsBytes.toByteBuffer.array())
+            .post(request).map(_.body[JsValue])
 
     override def get(): UserService = Consumer[JsValue, Future].apply(
         client)(ConsumerProcessor[UserService].generate()

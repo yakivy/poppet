@@ -13,11 +13,11 @@ import poppet.consumer._
 object ConsumerGenerator {
     private def client(
         restTemplate: RestTemplate)(url: String, authSecret: String
-    ): Client[Id] = request => {
+    ): Client[JsonNode, Id] = request => {
         val headers = new HttpHeaders()
         headers.add(HttpHeaders.AUTHORIZATION, authSecret)
         restTemplate.exchange(
-            new RequestEntity(request, headers, HttpMethod.POST, URI.create(url)), classOf[Array[Byte]]
+            new RequestEntity(request, headers, HttpMethod.POST, URI.create(url)), classOf[JsonNode]
         ).getBody
     }
 

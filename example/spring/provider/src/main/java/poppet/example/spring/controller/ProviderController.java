@@ -1,5 +1,6 @@
 package poppet.example.spring.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +12,7 @@ import scala.Function1;
 
 @Controller
 public class ProviderController {
-    private final Function1<RequestEntity<byte[]>, ResponseEntity<byte[]>> provider;
+    private final Function1<RequestEntity<JsonNode>, ResponseEntity<JsonNode>> provider;
 
     public ProviderController(
         UserService userService,
@@ -21,7 +22,7 @@ public class ProviderController {
     }
 
     @RequestMapping("/api/service")
-    public ResponseEntity<byte[]> apply(RequestEntity<byte[]> request) {
+    public ResponseEntity<JsonNode> apply(RequestEntity<JsonNode> request) {
         return provider.apply(request);
     }
 }

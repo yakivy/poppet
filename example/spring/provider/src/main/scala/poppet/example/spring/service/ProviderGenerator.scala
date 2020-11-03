@@ -12,14 +12,14 @@ import poppet.provider.all._
 object ProviderGenerator {
     private def authDecorator(
         authSecret: String
-    ): RequestEntity[Array[Byte]] => RequestEntity[Array[Byte]] = request => {
+    ): RequestEntity[JsonNode] => RequestEntity[JsonNode] = request => {
         if (request.getHeaders.get(HttpHeaders.AUTHORIZATION).contains(authSecret)) request
         else throw new IllegalArgumentException("Wrong secret!")
     }
 
     def apply(
         userService: UserService, authSecret: String
-    ): RequestEntity[Array[Byte]] => ResponseEntity[Array[Byte]] = {
+    ): RequestEntity[JsonNode] => ResponseEntity[JsonNode] = {
         val server = Provider[JsonNode, Id].apply(
             ProviderProcessor(userService).generate()
         ).materialize()

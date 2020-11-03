@@ -14,6 +14,8 @@ import poppet.example.http4s.service.UserService
 import poppet.example.http4s.poppet.coder.all._
 import poppet.provider.all._
 import scala.concurrent.ExecutionContext.global
+import org.http4s.circe.CirceEntityEncoder._
+import org.http4s.circe.CirceEntityDecoder._
 
 class ProviderController(authSecret: String) {
     implicit val cs = IO.contextShift(global)
@@ -25,7 +27,7 @@ class ProviderController(authSecret: String) {
     val routes = HttpRoutes.of[IO] {
         case request@POST -> Root / "api" / "service" => (for {
             _ <- checkAuth(request)
-            byteBody <- EitherT.right[String](request.body.compile.toVector.map(_.toArray))
+            byteBody <- EitherT.right[String](request.as[Json])
             response <- provider(byteBody)
         } yield response).foldF(InternalServerError(_), Ok(_))
     }
