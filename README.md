@@ -131,20 +131,20 @@ The library is build on following abstractions:
 
 #### Authentication
 As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's write the method that will check authorization header from the request on provider side, as an example I'll take Play Framework:
-```
+```scala
 private def checkAuth(request: Request[AnyContent]): Request[AnyContent] = {
     if (request.headers.get(Http.HeaderNames.PROXY_AUTHENTICATE).contains(authSecret)) request
     else throw new IllegalArgumentException("Wrong secret!")
 }
 ```
 and integrate it into the poppet endpoint like:
-```
+```scala
 def apply(): Action[AnyContent] = Action.async(request =>
     provider(checkAuth(request).body.asJson.get).map(Ok(_))
 )
 ```
 so the original goal is already reached, the only thing that left is to pass authorization header from the consumer. To achieve this, you can easily modify the consumer client:
-```
+```scala
 private val client: Client[Future] = request => wsClient.url(url)
     .withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> secret)
     .post(request).map(_.body[Json])
@@ -153,15 +153,15 @@ For more info you can check the [examples](#examples), all of them have simple a
 
 #### Failure handling
 All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple function from failure to result:
-```
+```scala
 type FailureHandler[A] = Failure => A
 ```
 by default, throwing failure handler is being resolved:
-```
+```scala
 implicit def throwingFailureHandler[A]: FailureHandler[A] = throw _
 ```
 so if your don't want to deal with JVM exceptions, you can provide your own instance of failure handler. Let's assume you want to pack a failure with `EitherT[Future, String, A]` kind, then failure handler can look like:
-```
+```scala
 type SR[A] = EitherT[Future, String, A]
 implicit def fh[A]: FailureHandler[SR[A]] = a => EitherT.leftT(a.getMessage)
 ```
@@ -169,7 +169,7 @@ For more info you can check [Http4s with Circe](#examples) example project, it i
 
 ### Manual calls
 If your coder has a human readable format (JSON for example), you can use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request body:
-```
+```json
 {
     "service": "poppet.UserService", //full class name of the service
     "method": "findById", //method name
@@ -179,7 +179,7 @@ If your coder has a human readable format (JSON for example), you can use a prov
 }
 ```
 then cURL call can look like:
-```
+```shell script
 curl --location --request POST '${providerUrl}' \
 --data-raw '{
     "service": "poppet.UserService",
