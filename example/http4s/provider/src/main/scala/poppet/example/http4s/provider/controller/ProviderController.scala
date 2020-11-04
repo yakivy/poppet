@@ -20,9 +20,12 @@ import org.http4s.circe.CirceEntityDecoder._
 class ProviderController(authSecret: String) {
     implicit val cs = IO.contextShift(global)
 
-    val provider = Provider[Json, SR].apply(
-        ProviderProcessor[UserService](new UserInternalService).generate()
-    ).materialize()
+    def checkAuth(request: Request[IO]): SR[Unit] = {
+        if (request.headers.get(Authorization.name).map(_.value).contains(authSecret)) EitherT.rightT(request)
+        else EitherT.leftT("Wrong secret")
+    }
+
+    val provider = Provider[Json, SR].service[UserService](new UserInternalService)
 
     val routes = HttpRoutes.of[IO] {
         case request@POST -> Root / "api" / "service" => (for {
@@ -30,10 +33,5 @@ class ProviderController(authSecret: String) {
             byteBody <- EitherT.right[String](request.as[Json])
             response <- provider(byteBody)
         } yield response).foldF(InternalServerError(_), Ok(_))
-    }
-
-    def checkAuth(request: Request[IO]): SR[Unit] = {
-        if (request.headers.get(Authorization.name).map(_.value).contains(authSecret)) EitherT.rightT(request)
-        else EitherT.leftT("Wrong secret")
     }
 }

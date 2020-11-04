@@ -5,33 +5,27 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 trait ConsumerProcessor[I, F[_], S] {
-    def process(client: Request[I] => F[Response[I]]): S
+    def apply(client: Request[I] => F[Response[I]]): S
 }
 
 object ConsumerProcessor {
-    def apply[S]: PartialConsumerProcessorApply[S] = new PartialConsumerProcessorApply[S]
-    class PartialConsumerProcessorApply[S] {
-        def generate[I, F[_]](): ConsumerProcessor[I, F, S] = macro generateImpl[I, F, S]
-    }
+    implicit def apply[I, F[_], S]: ConsumerProcessor[I, F, S] = macro applyImpl[I, F, S]
 
-    def generateImpl[I, F[_], S](
-        c: blackbox.Context)()(
+    def applyImpl[I, F[_], S](
+        c: blackbox.Context)(
         implicit IT: c.WeakTypeTag[I], FT: c.WeakTypeTag[F[_]], ST: c.WeakTypeTag[S]
     ): c.universe.Tree = {
         import c.universe._
-        val stype = ST.tpe
-        val itype = IT.tpe
-        val ftype = FT.tpe
-        val serviceName = stype.typeSymbol.fullName
-        val fmonad = q"implicitly[_root_.cats.Monad[$ftype]]"
-        val methods = stype.decls
+        val serviceName = ST.tpe.typeSymbol.fullName
+        val fmonad = q"implicitly[_root_.cats.Monad[$FT]]"
+        val methods = ST.tpe.decls
             .filter(m => m.isAbstract)
             .map(_.asMethod)
             .map { m =>
                 val methodName = m.name
                 val arguments = m.paramLists.map(ps => ps.map(p => q"${Ident(p.name)}: ${p.typeSignature}"))
                 val codedArgument: c.universe.Symbol => Tree = a => q"""implicitly[
-                    _root_.poppet.core.Coder[${a.typeSignature},${appliedType(ftype, itype)}]
+                    _root_.poppet.core.Coder[${a.typeSignature},${appliedType(FT.tpe, IT.tpe)}]
                 ].apply(${Ident(a.name)})"""
                 val withCodedArguments: Tree => Tree = tree => m.paramLists.flatten match {
                     case Nil => tree
@@ -39,7 +33,7 @@ object ConsumerProcessor {
                         q"""$fmonad.flatMap(${codedArgument(h)})((${Ident(h.name)}: ${h.typeSignature}) => $tree)"""
                     case hs => q"""$fmonad.flatten(
                         _root_.cats.Semigroupal.${TermName("map" + hs.size)}(..${hs.map(codedArgument)})(
-                            ..${hs.map(h => q"${Ident(h.name)}: $itype")} => $tree
+                            ..${hs.map(h => q"${Ident(h.name)}: $IT")} => $tree
                         )
                     )"""
                 }
@@ -52,11 +46,11 @@ object ConsumerProcessor {
                             )""")}
                         )
                     ))""")})(_.value)
-                    implicitly[_root_.poppet.core.Coder[${appliedType(ftype, itype)}, ${m.returnType}]].apply(result)
+                    implicitly[_root_.poppet.core.Coder[${appliedType(FT.tpe, IT.tpe)}, ${m.returnType}]].apply(result)
                 }"""
             }.toList
         q"""(
-           client => new $stype { ..$methods }
-        ): _root_.poppet.consumer.ConsumerProcessor[$itype, $ftype, $stype]"""
+           client => new $ST { ..$methods }
+        ): _root_.poppet.consumer.core.ConsumerProcessor[$IT, $FT, $ST]"""
     }
 }

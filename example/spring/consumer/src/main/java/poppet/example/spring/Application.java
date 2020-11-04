@@ -5,8 +5,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
-import poppet.example.spring.service.ConsumerGenerator;
 import poppet.example.spring.service.UserService;
+import poppet.example.spring.service.UserServiceProvider;
 
 @SpringBootApplication
 public class Application {
@@ -23,8 +23,8 @@ public class Application {
     public UserService userService(
         RestTemplate restTemplate,
         @Value("${consumer.url}") String url,
-        @Value("${auth.secret}") String authSecret
+        @Value("${auth.secret}") String secret
     ) {
-        return ConsumerGenerator.userService(restTemplate, url, authSecret);
+        return new UserServiceProvider(restTemplate, url, secret).get();
     }
 }

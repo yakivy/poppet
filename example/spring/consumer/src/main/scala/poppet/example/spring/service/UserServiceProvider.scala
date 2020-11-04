@@ -10,7 +10,7 @@ import org.springframework.web.client.RestTemplate
 import poppet.coder.jackson.all._
 import poppet.consumer._
 
-object ConsumerGenerator {
+class UserServiceProvider(restTemplate: RestTemplate)(url: String, secret: String) {
     private def client(
         restTemplate: RestTemplate)(url: String, authSecret: String
     ): Client[JsonNode, Id] = request => {
@@ -21,10 +21,5 @@ object ConsumerGenerator {
         ).getBody
     }
 
-    def userService(
-        restTemplate: RestTemplate)(url: String, authSecret: String
-    ): UserService = Consumer[JsonNode, Id].apply(
-        client(restTemplate)(url, authSecret))(
-        ConsumerProcessor[UserService].generate()
-    ).materialize()
+    def get: UserService = Consumer[JsonNode, Id](client(restTemplate)(url, secret)).service[UserService]
 }

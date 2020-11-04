@@ -17,7 +17,7 @@ class Consumer[I, F[_] : Monad, S](
     implicit qcoder: Coder[Request[I], F[I]],
     scoder: Coder[I, F[Response[I]]],
 ) {
-    def materialize(): S = processor.process(input => for {
+    def service: S = processor(input => for {
         request <- qcoder(input)
         response <- client(request)
         output <- scoder(response)
@@ -25,14 +25,20 @@ class Consumer[I, F[_] : Monad, S](
 }
 
 object Consumer {
-    def apply[I, F[_]] = new Builder[I, F]
+    def apply[I, F[_]](
+        client: Client[I, F])(
+        implicit FM: Monad[F],
+        qcoder: Coder[Request[I], F[I]],
+        scoder: Coder[I, F[Response[I]]]
+    ) = new Builder[I, F](client)
 
-    class Builder[I, F[_]] {
-        def apply[S](
-            client: Client[I, F])(processor: ConsumerProcessor[I, F, S])(
-            implicit FM: Monad[F],
-            qcoder: Coder[Request[I], F[I]],
-            scoder: Coder[I, F[Response[I]]],
-        ): Consumer[I, F, S] = new Consumer(client, processor)
+    class Builder[I, F[_]](
+        client: Client[I, F])(
+        implicit FM: Monad[F],
+        qcoder: Coder[Request[I], F[I]],
+        scoder: Coder[I, F[Response[I]]]
+    ) {
+        def service[S](implicit processor: ConsumerProcessor[I, F, S]): S =
+            new Consumer(client, processor).service
     }
 }

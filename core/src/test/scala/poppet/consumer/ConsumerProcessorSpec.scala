@@ -2,6 +2,7 @@ package poppet.consumer
 
 import cats.Id
 import org.scalatest.FreeSpec
+import poppet.consumer.core.ConsumerProcessor
 import poppet.core.Request
 import poppet.core.Response
 
@@ -25,7 +26,7 @@ class ConsumerProcessorSpec extends FreeSpec {
                 Response("0")
             }
             "for methods with different arguments number" in {
-                val a = ConsumerProcessor[A].generate[String, Id]().process(client)
+                val a = ConsumerProcessor[String, Id, A](client)
 
                 assert(a.a0 == 0 && request == Request(
                     "poppet.consumer.ConsumerProcessorSpec.A", "a0", Map.empty
@@ -46,7 +47,7 @@ class ConsumerProcessorSpec extends FreeSpec {
                     def a1(b0: Boolean)()(b1: Boolean): Int
                     def a2(b0: Boolean)(b10: Boolean, b11: Boolean): Int
                 }
-                val a = ConsumerProcessor[B].generate[String, Id]().process(client)
+                val a = ConsumerProcessor[String, Id, B](client)
 
                 assert(a.a0(true)(false) == 0 && request == Request(
                     "poppet.consumer.ConsumerProcessorSpec.B", "a0", Map("b0" -> "true", "b1" -> "false")
@@ -67,7 +68,7 @@ class ConsumerProcessorSpec extends FreeSpec {
                     def a2(b0: Boolean, b1: Boolean, b2: Boolean = true, b3: Boolean = true): Int
                 }
 
-                val a: C = ConsumerProcessor[C].generate[String, Id]().process(client)
+                val a: C = ConsumerProcessor[String, Id, C](client)
 
                 assert(a.a0(false) == 0 && request == Request(
                     "poppet.consumer.ConsumerProcessorSpec.C", "a0", Map("b" -> "false")
@@ -108,7 +109,7 @@ class ConsumerProcessorSpec extends FreeSpec {
             implicit val c0: Coder[Future[String], Int] = a => Await.result(a, Duration.Inf).toInt
             implicit val c1: Coder[Boolean, Future[String]] = a => Future.successful(a.toString)
 
-            val a = ConsumerProcessor[A].generate[String, Future]().process(r => {
+            val a = ConsumerProcessor[String, Future, A](r => {
                 request = r
                 Future.successful(Response("0"))
             })
@@ -147,7 +148,7 @@ class ConsumerProcessorSpec extends FreeSpec {
                 def a(b: Boolean): B[Int]
             }
 
-            val p = ConsumerProcessor[C].generate[String, A]().process(r => {
+            val p = ConsumerProcessor[String, A, C](r => {
                 request = r
                 Option(Response("0"))
             })
