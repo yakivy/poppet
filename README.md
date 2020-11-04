@@ -72,12 +72,13 @@ Create a provider for the service (can be created once and shared for all incomi
 import cats.implicits._
 import io.circe._
 import io.circe.generic.auto._
+import io.circe.syntax._
 import poppet.coder.circe.all._
 import poppet.provider.all._
 
 implicit val ec: ExecutionContext = ...
 
-val provider = Provider[JsValue, Future]
+val provider = Provider[Json, Future]
     .service[UserService](new UserInternalService)
     //.service[OtherService](otherService)
 ```
@@ -90,7 +91,7 @@ class ProviderController(
     cc: ControllerComponents)(implicit ec: ExecutionContext
 ) extends AbstractController(cc) {
     def apply(): Action[AnyContent] = Action.async(request =>
-        provider(request.body.asJson.get).map(Ok(_))
+        provider(request.body.asText.get.asJson).map(a => Ok(a.toString))
     )
 }
 ```
@@ -101,17 +102,18 @@ Create a for the service (can be created once and shared everywhere):
 import cats.implicits._
 import io.circe._
 import io.circe.generic.auto._
+import io.circe.syntax._
 import poppet.coder.circe.all._
 import poppet.consumer.all._
 
 implicit val ec: ExecutionContext = ...
 val wsClient: WSClient = ...
 
-val client: Client[JsValue, Future] = request => wsClient.url(
+val client: Client[Json, Future] = request => wsClient.url(
     s"http://${providerHostName}/api/service"
-).post(request).map(_.body[JsValue])
+).post(request.toString).map(_.body.asJson)
 
-val userService: UserService = Consumer[JsValue, Future](client)
+val userService: UserService = Consumer[Json, Future](client)
     .service[UserService]
 ```
 Enjoy 👌
@@ -145,7 +147,7 @@ so the original goal is already reached, the only thing that left is to pass aut
 ```
 private val client: Client[Future] = request => wsClient.url(url)
     .withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> secret)
-    .post(request).map(_.body[JsValue])
+    .post(request).map(_.body[Json])
 ```
 For more info you can check the [examples](#examples), all of them have simple authentication built on the same approach.
 
