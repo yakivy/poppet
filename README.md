@@ -169,7 +169,7 @@ For more info you can check [Http4s with Circe](#examples) example project, it i
 
 ### Manual calls
 If your coder has a human readable format (JSON for example), you can use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request body:
-```json
+```
 {
     "service": "poppet.UserService", //full class name of the service
     "method": "findById", //method name
