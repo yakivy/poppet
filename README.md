@@ -1,5 +1,5 @@
 ## Poppet
-[![Maven Central](https://img.shields.io/maven-central/v/com.github.yakivy/poppet-coder-core_2.13.svg)](https://mvnrepository.com/search?q=poppet)
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.yakivy/poppet-core_2.13.svg)](https://mvnrepository.com/search?q=poppet)
 [![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/https/oss.sonatype.org/com.github.yakivy/poppet-core_2.13.svg)](https://oss.sonatype.org/content/repositories/snapshots/com/github/yakivy/poppet-core_2.13/)
 [![Build Status](https://travis-ci.com/yakivy/poppet.svg?branch=master)](https://travis-ci.com/yakivy/poppet)
 [![codecov.io](https://codecov.io/gh/yakivy/poppet/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/github/yakivy/poppet/branch/master)
@@ -36,17 +36,20 @@ Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 - and a bunch of examples!
 
 ### Quick start
-Put a library version in the build file and add cats dependency, let's assume you are using SBT:
+Put poppet dependency in the build file, as an example I'll take poppet with circe, let's assume you are using SBT:
 ```scala
-val poppetVersion = "0.1.0"
+val poppetVersion = "0.1.1"
 
-libraryDependencies += Seq(
-    "org.typelevel" %% "cats-core" % catsVersion
+libraryDependencies ++= Seq(
+    "com.github.yakivy" %% "poppet-circe" % poppetVersion, //to use circe
+    //"com.github.yakivy" %% "poppet-play-json" % poppetVersion, //to use play json
+    //"com.github.yakivy" %% "poppet-jackson" % poppetVersion, //to use jackson
+    //"com.github.yakivy" %% "poppet-core" % poppetVersion, //to build custom coder
 )
 ```
 
 #### API
-Define clean service trait and share it between provider and consumer services:
+Define service trait and share it between provider and consumer services:
 ```scala
 case class User(email: String, firstName: String)
 trait UserService {
@@ -54,16 +57,6 @@ trait UserService {
 }
 ```
 #### Provider
-Add poppet coder, provider and favourite stack dependencies to the build file, as an example I'll take Play Framework with Circe:
-```scala
-enablePlugins(PlayScala)
-libraryDependencies += Seq(
-    "io.circe" %% "circe-parser" % circeVersion,
-    "io.circe" %% "circe-generic" % circeVersion,
-    "com.github.yakivy" %% "poppet-coder-circe" % poppetVersion,
-    "com.github.yakivy" %% "poppet-provider" % poppetVersion,
-)
-```
 Implement service trait with actual logic:
 ```scala
 class UserInternalService extends UserService {
@@ -74,7 +67,7 @@ class UserInternalService extends UserService {
     }
 }
 ```
-Create and materialize a provider for the service (can be materialized once and shared for all incoming calls), keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
+Create a provider for the service (can be created once and shared for all incoming calls), keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
 ```scala
 import cats.implicits._
 import io.circe._
@@ -84,9 +77,9 @@ import poppet.provider.all._
 
 implicit val ec: ExecutionContext = ...
 
-val provider = Provider[Json, Future](
-    ProviderProcessor[UserService](new UserInternalService).generate()
-).materialize()
+val provider = Provider[JsValue, Future]
+    .service[UserService](new UserInternalService)
+    //.service[OtherService](otherService)
 ```
 Register the provider:  
 ```
@@ -96,25 +89,14 @@ POST /api/service controller.ProviderController.apply()
 class ProviderController(
     cc: ControllerComponents)(implicit ec: ExecutionContext
 ) extends AbstractController(cc) {
-    def apply(): Action[ByteString] = Action.async(cc.parsers.byteString)(request =>
-        provider(request.body.toByteBuffer.array()).map(Ok(_))
+    def apply(): Action[AnyContent] = Action.async(request =>
+        provider(request.body.asJson.get).map(Ok(_))
     )
 }
 ```
 
 #### Consumer
-Add poppet coder, consumer and favourite stack dependencies to the build file, as a client I'll take Play WS:
-```scala
-enablePlugins(PlayScala)
-libraryDependencies += Seq(
-    "io.circe" %% "circe-parser" % circeVersion,
-    "io.circe" %% "circe-generic" % circeVersion,
-    "com.github.yakivy" %% "poppet-coder-circe" % poppetVersion,
-    "com.github.yakivy" %% "poppet-consumer" % poppetVersion,
-    ws
-)
-```
-Create and materialize consumer for the service (can be materialized once and shared everywhere):
+Create a for the service (can be created once and shared everywhere):
 ```scala
 import cats.implicits._
 import io.circe._
@@ -125,13 +107,12 @@ import poppet.consumer.all._
 implicit val ec: ExecutionContext = ...
 val wsClient: WSClient = ...
 
-val client: Client[Future] = request => wsClient.url(
+val client: Client[JsValue, Future] = request => wsClient.url(
     s"http://${providerHostName}/api/service"
-).post(request).map(_.bodyAsBytes.toByteBuffer.array())
+).post(request).map(_.body[JsValue])
 
-val userService: UserService = Consumer[Json, Future](
-    client)(ConsumerProcessor[UserService].generate()
-).materialize()
+val userService: UserService = Consumer[JsValue, Future](client)
+    .service[UserService]
 ```
 Enjoy 👌
 ```scala
@@ -142,31 +123,31 @@ userService.findById("1")
 The library is build on following abstractions:
 - `[I]` - is an intermediate data type what your coding framework is working with, can be any serialization format, but it would be easier to choose from existed coder modules, because they come with a bunch of predefined coders;
 - `[F[_]]` - is your service data kind, can be any monad (has `cats.Monad` typeclass);
-- `poppet.provider.Server`/`poppet.consumer.Client` - used for data transferring, technically they are just the functions from bytes to bytes lifted to passed data kind (`Array[Byte] => F[Array[Byte]]`). So you can use anything as long as it can receive/pass an array of bytes (for more info you can check the [examples](#examples), all of them were build on different web frameworks) and decorate it as you wish (example with authentication is [here](#authentication));
-- `poppet.ExchangeCoder`/`poppet.ModelCoder` - used for coding bytes to intermediate format/intermediate format to models. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of `poppet-coder-*` modules, where you hopefully will find a favourite coder. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/main/scala/poppet/coder/circe/instances/CirceCoderInstances.scala);
+- `poppet.consumer.Client` - used for data transferring, technically it is just the functions from `I` to `I` lifted to passed data kind (`I => F[I]`). So you can use anything as long as it can receive/pass chosen data type;
+- `poppet.Coder` - used for coding `I` to models and vice versa. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of modules, where you hopefully will find a favourite coder. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/main/scala/poppet/coder/circe/instances/CirceCoderInstances.scala);
 - `poppet.FailureHandler` - used for handling failures, more info you can find [here](#failure-handling).
 
 #### Authentication
 As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's write the method that will check authorization header from the request on provider side, as an example I'll take Play Framework:
 ```
-private def checkAuth(request: Request[ByteString]): Request[ByteString] = {
+private def checkAuth(request: Request[AnyContent]): Request[AnyContent] = {
     if (request.headers.get(Http.HeaderNames.PROXY_AUTHENTICATE).contains(authSecret)) request
     else throw new IllegalArgumentException("Wrong secret!")
 }
 ```
 and integrate it into the poppet endpoint like:
 ```
-def apply(): Action[ByteString] = Action.async(cc.parsers.byteString)(request =>
-    provider(checkAuth(request).body.toByteBuffer.array()).map(Ok(_))
+def apply(): Action[AnyContent] = Action.async(request =>
+    provider(checkAuth(request).body.asJson.get).map(Ok(_))
 )
 ```
-so the original goal is already reached, the only thing that left is to pass authorization header from the consumer. To this end, you can easily modify the consumer client:
+so the original goal is already reached, the only thing that left is to pass authorization header from the consumer. To achieve this, you can easily modify the consumer client:
 ```
 private val client: Client[Future] = request => wsClient.url(url)
-    .withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> authSecret)
-    .post(request).map(_.bodyAsBytes.toByteBuffer.array())
+    .withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> secret)
+    .post(request).map(_.body[JsValue])
 ```
-For more info you can check the [examples](#examples), all of them have simple authentication build on the same approach.
+For more info you can check the [examples](#examples), all of them have simple authentication built on the same approach.
 
 #### Failure handling
 All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple function from failure to result:
@@ -182,7 +163,7 @@ so if your don't want to deal with JVM exceptions, you can provide your own inst
 type SR[A] = EitherT[Future, String, A]
 implicit def fh[A]: FailureHandler[SR[A]] = a => EitherT.leftT(a.getMessage)
 ```
-For more info you can check [Http4s with Circe](#examples) example project, it is build around `EitherT[IO, String, A]` kind.
+For more info you can check [Http4s with Circe](#examples) example project, it is built around `EitherT[IO, String, A]` kind.
 
 ### Manual calls
 If your coder has a human readable format (JSON for example), you can use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request body:
@@ -195,7 +176,7 @@ If your coder has a human readable format (JSON for example), you can use a prov
     }
 }
 ```
-so cURL call can look like:
+then cURL call can look like:
 ```
 curl --location --request POST '${providerUrl}' \
 --data-raw '{
