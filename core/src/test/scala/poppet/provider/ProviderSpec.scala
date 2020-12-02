@@ -15,7 +15,7 @@ class ProviderSpec extends FreeSpec {
             }
         implicit val scoder: Coder[Response[String], String] = a => a.value
         implicit val fh: FailureHandler[Id[Map[String, String] => cats.Id[String]]] = throw _
-        val c = new Provider[String, Id](List(new MethodProcessor[String, Id](
+        val c = new Provider[String, Id](identity, List(new MethodProcessor[String, Id](
             "A", "a", List("p0"), request => request("p0") + " response"
         )))
         assert(c("A,a,request") == "request response")

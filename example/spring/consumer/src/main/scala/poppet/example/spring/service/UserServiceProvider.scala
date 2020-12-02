@@ -13,7 +13,7 @@ import poppet.consumer._
 class UserServiceProvider(restTemplate: RestTemplate)(url: String, secret: String) {
     private def client(
         restTemplate: RestTemplate)(url: String, authSecret: String
-    ): Client[JsonNode, Id] = request => {
+    ): Transport[JsonNode, Id] = request => {
         val headers = new HttpHeaders()
         headers.add(HttpHeaders.AUTHORIZATION, authSecret)
         restTemplate.exchange(

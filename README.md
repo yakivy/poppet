@@ -15,8 +15,8 @@ Poppet is a minimal, extensible, type safe Scala library for generating RPC serv
     1. [Provider](#provider)
     1. [Consumer](#consumer)
 1. [Customizations](#customizations)
-    1. [Authentication](#authentication)
     1. [Failure handling](#failure-handling)
+    1. [Authentication](#authentication)
 1. [Manual calls](#manual-calls)
 1. [Examples](#examples)
 
@@ -30,10 +30,9 @@ You may find Poppet useful if you want to...
 Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 - no explicit macro application `.call`, result of a consumer is the original trait;
 - no hardcoded return kind `Future`, you can specify any monad (has `cats.Monad` typeclass);
-- no forced coder dependencies `uPickle`, you can specify any arbitrary serialization format;
+- no forced coder dependencies `uPickle`, you can specify any serialization format;
 - robust error handling mechanism;
-- cleaner macros logic (~50 lines in comparison to ~300);
-- and a bunch of examples!
+- cleaner macros logic (~50 lines in comparison to ~300).
 
 ### Quick start
 Put poppet dependency in the build file, as an example I'll take poppet with circe, let's assume you are using SBT:
@@ -56,6 +55,7 @@ trait UserService {
     def findById(id: String): Future[User]
 }
 ```
+
 #### Provider
 Implement service trait with actual logic:
 ```scala
@@ -78,7 +78,7 @@ import poppet.provider.all._
 
 implicit val ec: ExecutionContext = ...
 
-val provider = Provider[Json, Future]
+val provider = Provider[Json, Future]()
     .service[UserService](new UserInternalService)
     //.service[OtherService](otherService)
 ```
@@ -125,9 +125,25 @@ userService.findById("1")
 The library is build on following abstractions:
 - `[I]` - is an intermediate data type what your coding framework is working with, can be any serialization format, but it would be easier to choose from existed coder modules, because they come with a bunch of predefined coders;
 - `[F[_]]` - is your service data kind, can be any monad (has `cats.Monad` typeclass);
-- `poppet.consumer.Client` - used for data transferring, technically it is just the functions from `I` to `I` lifted to passed data kind (`I => F[I]`). So you can use anything as long as it can receive/pass chosen data type;
+- `poppet.consumer.Transport` - used for data transferring, technically it is just the functions from `I` to `I` lifted to passed data kind (`I => F[I]`). So you can use anything as long as it can receive/pass chosen data type;
 - `poppet.Coder` - used for coding `I` to models and vice versa. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of modules, where you hopefully will find a favourite coder. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/main/scala/poppet/coder/circe/instances/CirceCoderInstances.scala);
 - `poppet.FailureHandler` - used for handling failures, more info you can find [here](#failure-handling).
+
+#### Failure handling
+All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple function from failure to result:
+```scala
+type FailureHandler[A] = Failure => A
+```
+by default, throwing failure handler is being resolved:
+```scala
+implicit def throwingFailureHandler[A]: FailureHandler[A] = throw _
+```
+so if your don't want to deal with JVM exceptions, you can provide your own instance of failure handler. Let's assume you want to pack a failure with `EitherT[Future, String, A]` kind, then failure handler can look like:
+```scala
+type SR[A] = EitherT[Future, String, A]
+implicit def fh[A]: FailureHandler[SR[A]] = f => EitherT.leftT(f.getMessage)
+```
+For more info you can check [Http4s with Circe](#examples) example project, it is built around `EitherT[IO, String, A]` kind.
 
 #### Authentication
 As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's write the method that will check authorization header from the request on provider side, as an example I'll take Play Framework:
@@ -151,41 +167,15 @@ private val client: Client[Future] = request => wsClient.url(url)
 ```
 For more info you can check the [examples](#examples), all of them have simple authentication built on the same approach.
 
-#### Failure handling
-All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple function from failure to result:
-```scala
-type FailureHandler[A] = Failure => A
-```
-by default, throwing failure handler is being resolved:
-```scala
-implicit def throwingFailureHandler[A]: FailureHandler[A] = throw _
-```
-so if your don't want to deal with JVM exceptions, you can provide your own instance of failure handler. Let's assume you want to pack a failure with `EitherT[Future, String, A]` kind, then failure handler can look like:
-```scala
-type SR[A] = EitherT[Future, String, A]
-implicit def fh[A]: FailureHandler[SR[A]] = a => EitherT.leftT(a.getMessage)
-```
-For more info you can check [Http4s with Circe](#examples) example project, it is built around `EitherT[IO, String, A]` kind.
-
 ### Manual calls
-If your coder has a human readable format (JSON for example), you can use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of request body:
-```
-{
-    "service": "poppet.UserService", //full class name of the service
-    "method": "findById", //method name
-    "arguments": {
-        "id": "1" //argument name: encoded value
-    }
-}
-```
-then cURL call can look like:
+If your coder has a human readable format (JSON for example), you can use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of curl call:
 ```shell script
 curl --location --request POST '${providerUrl}' \
 --data-raw '{
-    "service": "poppet.UserService",
-    "method": "findById",
+    "service": "poppet.UserService", #full class name of the service
+    "method": "findById", #method name
     "arguments": {
-        "id": "1"
+        "id": "1" #argument name: encoded value
     }
 }'
 ```

@@ -7,38 +7,45 @@ import poppet.core.Request
 import poppet.core.Response
 
 /**
- * @tparam I - intermediate data type, for example Json
- * @tparam F - client data kind, for example Future[_]
- * @tparam S - service type, for example HelloService
+ * @param transport function that transferring data to the provider
+ * @param peek function that can decorate given request -> response function without changing the types.
+ * It is mostly used to peek on parsed dtos, for example for logging.
+ *
+ * @tparam I intermediate data type, for example Json
+ * @tparam F consumer data kind, for example Future[_]
+ * @tparam S service type, for example HelloService
  */
 class Consumer[I, F[_] : Monad, S](
-    client: Client[I, F],
+    transport: Transport[I, F],
+    peek: Peek[I, F],
     processor: ConsumerProcessor[I, F, S])(
     implicit qcoder: Coder[Request[I], F[I]],
     scoder: Coder[I, F[Response[I]]],
 ) {
-    def service: S = processor(input => for {
+    def service: S = processor(peek(input => for {
         request <- qcoder(input)
-        response <- client(request)
+        response <- transport(request)
         output <- scoder(response)
-    } yield output)
+    } yield output))
 }
 
 object Consumer {
     def apply[I, F[_]](
-        client: Client[I, F])(
+        client: Transport[I, F],
+        peek: Peek[I, F] = identity[Request[I] => F[Response[I]]](_))(
         implicit FM: Monad[F],
         qcoder: Coder[Request[I], F[I]],
         scoder: Coder[I, F[Response[I]]]
-    ) = new Builder[I, F](client)
+    ): Builder[I, F] = new Builder[I, F](client, peek)
 
     class Builder[I, F[_]](
-        client: Client[I, F])(
+        client: Transport[I, F],
+        peek: Peek[I, F])(
         implicit FM: Monad[F],
         qcoder: Coder[Request[I], F[I]],
         scoder: Coder[I, F[Response[I]]]
     ) {
         def service[S](implicit processor: ConsumerProcessor[I, F, S]): S =
-            new Consumer(client, processor).service
+            new Consumer(client, peek, processor).service
     }
 }

@@ -7,5 +7,5 @@ import poppet.provider.all._
 
 object ProviderGenerator {
     def apply(userService: UserService, authSecret: String): JsonNode => JsonNode =
-        Provider[JsonNode, Id].service(userService)
+        Provider[JsonNode, Id]().service(userService)
 }

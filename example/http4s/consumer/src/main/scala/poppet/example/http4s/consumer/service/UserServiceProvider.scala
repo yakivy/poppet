@@ -23,7 +23,7 @@ class UserServiceProvider(
     clientResource: Resource[IO, client.Client[IO]])(
     implicit cs: ContextShift[IO]
 ) {
-    private val client: Client[Json, SR] = request => EitherT(clientResource.use(client =>
+    private val client: Transport[Json, SR] = request => EitherT(clientResource.use(client =>
         Method.POST.apply(
             request, uri"http://localhost:9001/api/service", Header(Authorization.name.value, secret)
         ).flatMap(client.run(_).use {

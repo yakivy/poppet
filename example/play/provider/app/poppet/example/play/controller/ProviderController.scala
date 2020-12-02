@@ -25,7 +25,7 @@ class ProviderController @Inject()(
         else throw new IllegalArgumentException("Wrong secret!")
     }
 
-    private val provider = Provider[JsValue, Future].service(userService)
+    private val provider = Provider[JsValue, Future]().service(userService)
 
     def apply(): Action[AnyContent] = Action.async(request =>
         provider(checkAuth(request).body.asJson.get).map(Ok(_))

@@ -20,7 +20,7 @@ class UserServiceProvider @Inject()(
     private val secret = config.get[String]("auth.secret")
     private val url = config.get[String]("consumer.url")
 
-    private val client: Client[JsValue, Future] =
+    private val client: Transport[JsValue, Future] =
         request => wsClient.url(url).withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> secret)
             .post(request).map(_.body[JsValue])
 

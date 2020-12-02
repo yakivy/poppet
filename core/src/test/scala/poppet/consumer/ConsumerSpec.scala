@@ -21,6 +21,7 @@ class ConsumerSpec extends FreeSpec {
                 require(parts(1) == "a")
                 (parts(2) + " response")
             },
+            identity,
             new ConsumerProcessor[String, Id, A] {
                 override def apply(client: Request[String] => Id[Response[String]]): A = new A {
                     override def a(p0: String): String = client(Request("A", "a", Map("p0" -> p0))).value

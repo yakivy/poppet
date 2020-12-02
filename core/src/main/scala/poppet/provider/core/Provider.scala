@@ -8,10 +8,14 @@ import poppet.core.Response
 import poppet.provider.all._
 
 /**
- * @tparam I - intermediate data type, for example Json
- * @tparam F - service data kind, for example Future[_]
+ * @param peek function that can decorate given request -> response function without changing the types.
+ * It is mostly used to peek on parsed dtos, for example for logging.
+ *
+ * @tparam I intermediate data type, for example Json
+ * @tparam F service data kind, for example Future[_]
  */
 class Provider[I, F[_] : Monad](
+    peek: Peek[I, F],
     processors: List[MethodProcessor[I, F]])(
     implicit qcoder: Coder[I, F[Request[I]]],
     scoder: Coder[Response[I], F[I]],
@@ -44,7 +48,7 @@ class Provider[I, F[_] : Monad](
 
     def apply(request: I): F[I] = for {
         input <- qcoder(request)
-        output <- execute(input)
+        output <- peek(execute)(input)
         response <- scoder(output)
     } yield response
 
@@ -54,25 +58,27 @@ class Provider[I, F[_] : Monad](
             serviceProcessors.nonEmpty,
             "Passed service has no abstract methods. Are you sure that you passed trait as generic parameter?"
         )
-        new Provider[I, F](processors ::: serviceProcessors)
+        new Provider[I, F](peek, processors ::: serviceProcessors)
     }
 }
 
 object Provider {
     def apply[I, F[_]](
+        peek: Peek[I, F] = identity[Request[I] => F[Response[I]]](_))(
         implicit FM: Monad[F],
         qcoder: Coder[I, F[Request[I]]],
         scoder: Coder[Response[I], F[I]],
         fh: FailureHandler[F[Map[String, I] => F[I]]]
-    ) = new Builder[I, F]()
+    ): Builder[I, F] = new Builder[I, F](peek)
 
     class Builder[I, F[_]](
+        peek: Peek[I, F])(
         implicit FM: Monad[F],
         qcoder: Coder[I, F[Request[I]]],
         scoder: Coder[Response[I], F[I]],
         fh: FailureHandler[F[Map[String, I] => F[I]]]
     ) {
         def service[S](s: S)(implicit processor: ProviderProcessor[I, F, S]): Provider[I, F] =
-            new Provider[I, F](Nil).service(s)
+            new Provider[I, F](peek, Nil).service(s)
     }
 }
