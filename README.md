@@ -76,11 +76,15 @@ import io.circe.generic.auto._
 import io.circe.parser._
 import poppet.coder.circe.all._
 import poppet.consumer.all._
+import poppet.consumer.all._
+import scala.concurrent.ExecutionContext.global
 
-implicit val ec: ExecutionContext = ...
-val transport: Transport[Json, Future] = ...
+//change with serious pool
+implicit val ec: ExecutionContext = global
+//change with transport call
+val transport: Transport[Json, Future] = request => provider(request)
 
-val userService = Consumer[Json, Future](client)
+val userService = Consumer[Json, Future](transport)
     .service[UserService]
 ```
 Enjoy 👌
@@ -92,12 +96,13 @@ userService.findById("1")
 The library is build on following abstractions:
 - `[I]` - is an intermediate data type what your coding framework is working with, can be any serialization format, but it would be easier to choose from existed coder modules, because they come with a bunch of predefined coders;
 - `[F[_]]` - is your service data kind, can be any monad (has `cats.Monad` typeclass);
-- `poppet.consumer.Transport` - used for data transferring, technically it is just the functions from `I` to `I` lifted to passed data kind (`I => F[I]`). So you can use anything as long as it can receive/pass chosen data type;
-- `poppet.Coder` - used for coding `I` to models and vice versa. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of modules, where you hopefully will find a favourite coder. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/main/scala/poppet/coder/circe/instances/CirceCoderInstances.scala);
-- `poppet.FailureHandler` - used for handling failures, more info you can find [here](#failure-handling).
+- `poppet.consumer.Transport` - used to transfer the data between consumer and provider, technically it is just the functions from `I` to `I` lifted to passed data kind (`I => F[I]`). So you can use anything as long as it can receive/pass chosen data type;
+- `poppet.Coder` - used to code `I` to models and vice versa. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of modules, where you hopefully will find a favourite coder. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/main/scala/poppet/coder/circe/instances/CirceCoderInstances.scala);
+- `poppet.FailureHandler` - used to handle internal failures, more info you can find [here](#failure-handling);
+- `poppet.Peek[I, F[_]]` - used to decorate request -> response function without changing the types. Good fit for logging.
 
 #### Logging
-
+Section in development...
 
 #### Failure handling
 All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple function from failure to result:
@@ -116,19 +121,21 @@ implicit def fh[A]: FailureHandler[SR[A]] = f => EitherT.leftT(f.getMessage)
 For more info you can check [Http4s with Circe](#examples) example project, it is built around `EitherT[IO, String, A]` kind.
 
 #### Authentication
-As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's add authorization header check on provider side before provider invocation, as an example I'll take Play Framework:
+As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's add authorization header check on provider side before provider invocation:
 ```scala
-def apply(): Action[AnyContent] = Action.async { request =>
+def provide(request: Request): Response = {
     if (!request.headers.get("secret").contains(secret))
         throw new IllegalArgumentException("Wrong secret!")
-    provider(checkAuth(request).body.asJson.get).map(Ok(_))
+    provider(request.body[Json]).map(Response(_))
 }
 ```
 and then pass authorization header in the consumer transport:
 ```scala
-private val transport: Transport[Future] = request => wsClient.url(url)
+private val transport: Transport[Future] = request => client
+    .url(url)
     .withHttpHeaders("secret" -> secret)
-    .post(request).map(_.body[Json])
+    .post(request)
+    .map(_.body[Json])
 ```
 For more info you can check the [examples](#examples), all of them have simple authentication built on the same approach.
 
