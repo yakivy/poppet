@@ -25,7 +25,7 @@ class ProviderController(authSecret: String) {
         else EitherT.leftT("Wrong secret")
     }
 
-    val provider = Provider[Json, SR].service[UserService](new UserInternalService)
+    val provider = Provider[Json, SR]().service[UserService](new UserInternalService)
 
     val routes = HttpRoutes.of[IO] {
         case request@POST -> Root / "api" / "service" => (for {

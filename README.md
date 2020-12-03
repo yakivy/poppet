@@ -6,33 +6,23 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 <a href="https://typelevel.org/cats/"><img src="https://typelevel.org/cats/img/cats-badge.svg" height="40px" align="right" alt="Cats friendly" /></a>
 
-Poppet is a minimal, extensible, type safe Scala library for generating RPC services from pure service traits.
-
-### Table of contents
-1. [Motivation](#motivation)
-1. [Quick start](#quick-start)
-    1. [API](#api)
-    1. [Provider](#provider)
-    1. [Consumer](#consumer)
-1. [Customizations](#customizations)
-    1. [Failure handling](#failure-handling)
-    1. [Authentication](#authentication)
-1. [Manual calls](#manual-calls)
-1. [Examples](#examples)
-
-### Motivation
-
-You may find Poppet useful if you want to...
-- automate an RPC services generation from the service traits with several lines of code
-- keep your services sparkling clean
-- customize almost every piece of the library you are using 😄
+Poppet is a minimal, type-safe RPC Scala library.
 
 Essential differences from [autowire](https://github.com/lihaoyi/autowire):
-- no explicit macro application `.call`, result of a consumer is the original trait;
+- no explicit macro application `.call`, result of a consumer is an instance of original trait;
 - no hardcoded return kind `Future`, you can specify any monad (has `cats.Monad` typeclass);
 - no forced coder dependencies `uPickle`, you can specify any serialization format;
 - robust error handling mechanism;
 - cleaner macros logic (~50 lines in comparison to ~300).
+
+### Table of contents
+1. [Quick start](#quick-start)
+1. [Customizations](#customizations)
+    1. [Logging](#logging)
+    1. [Failure handling](#failure-handling)
+    1. [Authentication](#authentication)
+1. [Manual calls](#manual-calls)
+1. [Examples](#examples)
 
 ### Quick start
 Put poppet dependency in the build file, as an example I'll take poppet with circe, let's assume you are using SBT:
@@ -46,8 +36,6 @@ libraryDependencies ++= Seq(
     //"com.github.yakivy" %% "poppet-core" % poppetVersion, //to build custom coder
 )
 ```
-
-#### API
 Define service trait and share it between provider and consumer services:
 ```scala
 case class User(email: String, firstName: String)
@@ -55,8 +43,6 @@ trait UserService {
     def findById(id: String): Future[User]
 }
 ```
-
-#### Provider
 Implement service trait with actual logic:
 ```scala
 class UserInternalService extends UserService {
@@ -67,12 +53,12 @@ class UserInternalService extends UserService {
     }
 }
 ```
-Create a provider for the service (can be created once and shared for all incoming calls), keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
+Create service provider (can be created once and shared for all incoming calls), keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
 ```scala
 import cats.implicits._
 import io.circe._
 import io.circe.generic.auto._
-import io.circe.syntax._
+import io.circe.parser._
 import poppet.coder.circe.all._
 import poppet.provider.all._
 
@@ -82,38 +68,19 @@ val provider = Provider[Json, Future]()
     .service[UserService](new UserInternalService)
     //.service[OtherService](otherService)
 ```
-Register the provider:  
-```
-POST /api/service controller.ProviderController.apply()
-```
-```scala
-class ProviderController(
-    cc: ControllerComponents)(implicit ec: ExecutionContext
-) extends AbstractController(cc) {
-    def apply(): Action[AnyContent] = Action.async(request =>
-        provider(request.body.asText.get.asJson).map(a => Ok(a.toString))
-    )
-}
-```
-
-#### Consumer
-Create a for the service (can be created once and shared everywhere):
+Create service consumer (can be created once and shared everywhere):
 ```scala
 import cats.implicits._
 import io.circe._
 import io.circe.generic.auto._
-import io.circe.syntax._
+import io.circe.parser._
 import poppet.coder.circe.all._
 import poppet.consumer.all._
 
 implicit val ec: ExecutionContext = ...
-val wsClient: WSClient = ...
+val transport: Transport[Json, Future] = ...
 
-val client: Client[Json, Future] = request => wsClient.url(
-    s"http://${providerHostName}/api/service"
-).post(request.toString).map(_.body.asJson)
-
-val userService: UserService = Consumer[Json, Future](client)
+val userService = Consumer[Json, Future](client)
     .service[UserService]
 ```
 Enjoy 👌
@@ -128,6 +95,9 @@ The library is build on following abstractions:
 - `poppet.consumer.Transport` - used for data transferring, technically it is just the functions from `I` to `I` lifted to passed data kind (`I => F[I]`). So you can use anything as long as it can receive/pass chosen data type;
 - `poppet.Coder` - used for coding `I` to models and vice versa. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of modules, where you hopefully will find a favourite coder. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/main/scala/poppet/coder/circe/instances/CirceCoderInstances.scala);
 - `poppet.FailureHandler` - used for handling failures, more info you can find [here](#failure-handling).
+
+#### Logging
+
 
 #### Failure handling
 All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple function from failure to result:
@@ -146,23 +116,18 @@ implicit def fh[A]: FailureHandler[SR[A]] = f => EitherT.leftT(f.getMessage)
 For more info you can check [Http4s with Circe](#examples) example project, it is built around `EitherT[IO, String, A]` kind.
 
 #### Authentication
-As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's write the method that will check authorization header from the request on provider side, as an example I'll take Play Framework:
+As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's add authorization header check on provider side before provider invocation, as an example I'll take Play Framework:
 ```scala
-private def checkAuth(request: Request[AnyContent]): Request[AnyContent] = {
-    if (request.headers.get(Http.HeaderNames.PROXY_AUTHENTICATE).contains(authSecret)) request
-    else throw new IllegalArgumentException("Wrong secret!")
+def apply(): Action[AnyContent] = Action.async { request =>
+    if (!request.headers.get("secret").contains(secret))
+        throw new IllegalArgumentException("Wrong secret!")
+    provider(checkAuth(request).body.asJson.get).map(Ok(_))
 }
 ```
-and integrate it into the poppet endpoint like:
+and then pass authorization header in the consumer transport:
 ```scala
-def apply(): Action[AnyContent] = Action.async(request =>
-    provider(checkAuth(request).body.asJson.get).map(Ok(_))
-)
-```
-so the original goal is already reached, the only thing that left is to pass authorization header from the consumer. To achieve this, you can easily modify the consumer client:
-```scala
-private val client: Client[Future] = request => wsClient.url(url)
-    .withHttpHeaders(Http.HeaderNames.PROXY_AUTHENTICATE -> secret)
+private val transport: Transport[Future] = request => wsClient.url(url)
+    .withHttpHeaders("secret" -> secret)
     .post(request).map(_.body[Json])
 ```
 For more info you can check the [examples](#examples), all of them have simple authentication built on the same approach.
