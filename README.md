@@ -58,7 +58,6 @@ Create service provider (can be created once and shared for all incoming calls),
 import cats.implicits._
 import io.circe._
 import io.circe.generic.auto._
-import io.circe.parser._
 import poppet.coder.circe.all._
 import poppet.provider.all._
 
@@ -73,14 +72,12 @@ Create service consumer (can be created once and shared everywhere):
 import cats.implicits._
 import io.circe._
 import io.circe.generic.auto._
-import io.circe.parser._
 import poppet.coder.circe.all._
 import poppet.consumer.all._
-import poppet.consumer.all._
-import scala.concurrent.ExecutionContext.global
+import scala.concurrent.ExecutionContext
 
 //change with serious pool
-implicit val ec: ExecutionContext = global
+implicit val ec: ExecutionContext = ExecutionContext.global
 //change with transport call
 val transport: Transport[Json, Future] = request => provider(request)
 
