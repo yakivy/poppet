@@ -31,17 +31,17 @@ class ProviderProcessorSpec extends FreeSpec {
                     val p = ProviderProcessor[String, Id, A](a)
 
                     assert(p(0).service == "poppet.provider.ProviderProcessorSpec.A"
-                        && p(0).name == "a0" && p(0).arguments == List.empty
-                        && p(0).f(Map.empty) == "0")
-                    assert(p(0).service == "poppet.provider.ProviderProcessorSpec.A"
-                        && p(1).name == "a00" && p(1).arguments == List.empty
-                        && p(1).f(Map.empty) == "0")
-                    assert(p(0).service == "poppet.provider.ProviderProcessorSpec.A"
-                        && p(2).name == "a1" && p(2).arguments == List("b")
-                        && p(2).f(Map("b" -> "true")) == "1")
-                    assert(p(0).service == "poppet.provider.ProviderProcessorSpec.A"
-                        && p(3).name == "a2" && p(3).arguments == List("b0", "b1")
-                        && p(3).f(Map("b0" -> "false", "b1" -> "true")) == "1")
+                        && p(0).name == "a2" && p(0).arguments == List("b0", "b1")
+                        && p(0).f(Map("b0" -> "false", "b1" -> "true")) == "1")
+                    assert(p(1).service == "poppet.provider.ProviderProcessorSpec.A"
+                        && p(1).name == "a1" && p(1).arguments == List("b")
+                        && p(1).f(Map("b" -> "true")) == "1")
+                    assert(p(2).service == "poppet.provider.ProviderProcessorSpec.A"
+                        && p(2).name == "a00" && p(2).arguments == List.empty
+                        && p(2).f(Map.empty) == "0")
+                    assert(p(3).service == "poppet.provider.ProviderProcessorSpec.A"
+                        && p(3).name == "a0" && p(3).arguments == List.empty
+                        && p(3).f(Map.empty) == "0")
                 }
                 "for methods with multiple argument lists" in {
                     trait B {
@@ -59,14 +59,14 @@ class ProviderProcessorSpec extends FreeSpec {
                     val p = ProviderProcessor[String, Id, B](b)
 
                     assert(p(0).service == "poppet.provider.ProviderProcessorSpec.B"
-                        && p(0).name == "a0" && p(0).arguments == List("b0", "b1")
-                        && p(0).f(Map("b0" -> "true", "b1" -> "false")) == "1")
-                    assert(p(0).service == "poppet.provider.ProviderProcessorSpec.B"
+                        && p(0).name == "a2" && p(0).arguments == List("b0", "b10", "b11")
+                        && p(0).f(Map("b0" -> "true", "b10" -> "true", "b11" -> "true")) == "3")
+                    assert(p(1).service == "poppet.provider.ProviderProcessorSpec.B"
                         && p(1).name == "a1" && p(1).arguments == List("b0", "b1")
                         && p(1).f(Map("b0" -> "false", "b1" -> "false")) == "0")
-                    assert(p(0).service == "poppet.provider.ProviderProcessorSpec.B"
-                        && p(2).name == "a2" && p(2).arguments == List("b0", "b10", "b11")
-                        && p(2).f(Map("b0" -> "true", "b10" -> "true", "b11" -> "true")) == "3")
+                    assert(p(2).service == "poppet.provider.ProviderProcessorSpec.B"
+                        && p(2).name == "a0" && p(2).arguments == List("b0", "b1")
+                        && p(2).f(Map("b0" -> "true", "b1" -> "false")) == "1")
                 }
                 "for methods with default arguments" in {
                     trait C {
@@ -85,16 +85,14 @@ class ProviderProcessorSpec extends FreeSpec {
                     val p = ProviderProcessor[String, Id, C](c)
 
                     assert(p(0).service == "poppet.provider.ProviderProcessorSpec.C"
-                        && p(0).name == "a0" && p(0).arguments == List("b")
-                        && p(0).f(Map("b" -> "false")) == "0")
-                    assert(p(0).service == "poppet.provider.ProviderProcessorSpec.C"
+                        && p(0).name == "a2" && p(0).arguments == List("b0", "b1", "b2", "b3")
+                        && p(0).f(Map("b0" -> "true", "b1" -> "true", "b2" -> "true", "b3" -> "true")) == "4")
+                    assert(p(1).service == "poppet.provider.ProviderProcessorSpec.C"
                         && p(1).name == "a1" && p(1).arguments == List("b0", "b1")
                         && p(1).f(Map("b0" -> "true", "b1" -> "false")) == "1")
-                    assert(p(0).service == "poppet.provider.ProviderProcessorSpec.C"
-                        && p(2).name == "a2" && p(2).arguments == List("b0", "b1", "b2", "b3")
-                        && p(2).f(Map(
-                        "b0" -> "true", "b1" -> "true", "b2" -> "true", "b3" -> "true"
-                    )) == "4")
+                    assert(p(2).service == "poppet.provider.ProviderProcessorSpec.C"
+                        && p(2).name == "a0" && p(2).arguments == List("b")
+                        && p(2).f(Map("b" -> "false")) == "0")
                 }
             }
         }
@@ -114,17 +112,17 @@ class ProviderProcessorSpec extends FreeSpec {
                 def result[A](value: Future[A]): A = Await.result[A](value, Duration.Inf)
 
                 assert(p(0).service == "poppet.provider.ProviderProcessorSpec.A"
-                    && p(0).name == "a0" && p(0).arguments == List.empty
-                    && result(p(0).f(Map.empty)) == "0")
-                assert(p(0).service == "poppet.provider.ProviderProcessorSpec.A"
-                    && p(1).name == "a00" && p(1).arguments == List.empty
-                    && result(p(1).f(Map.empty)) == "0")
-                assert(p(0).service == "poppet.provider.ProviderProcessorSpec.A"
-                    && p(2).name == "a1" && p(2).arguments == List("b")
-                    && result(p(2).f(Map("b" -> "true"))) == "1")
-                assert(p(0).service == "poppet.provider.ProviderProcessorSpec.A"
-                    && p(3).name == "a2" && p(3).arguments == List("b0", "b1")
-                    && result(p(3).f(Map("b0" -> "true", "b1" -> "true"))) == "2")
+                    && p(0).name == "a2" && p(0).arguments == List("b0", "b1")
+                    && result(p(0).f(Map("b0" -> "true", "b1" -> "true"))) == "2")
+                assert(p(1).service == "poppet.provider.ProviderProcessorSpec.A"
+                    && p(1).name == "a1" && p(1).arguments == List("b")
+                    && result(p(1).f(Map("b" -> "true"))) == "1")
+                assert(p(2).service == "poppet.provider.ProviderProcessorSpec.A"
+                    && p(2).name == "a00" && p(2).arguments == List.empty
+                    && result(p(2).f(Map.empty)) == "0")
+                assert(p(3).service == "poppet.provider.ProviderProcessorSpec.A"
+                    && p(3).name == "a0" && p(3).arguments == List.empty
+                    && result(p(3).f(Map.empty)) == "0")
             }
         }
         "when has A data kind and service has B data kind should generate instance" in {

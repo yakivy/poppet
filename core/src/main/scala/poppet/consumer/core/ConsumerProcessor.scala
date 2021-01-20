@@ -18,7 +18,7 @@ object ConsumerProcessor {
         import c.universe._
         val serviceName = ST.tpe.typeSymbol.fullName
         val fmonad = q"implicitly[_root_.cats.Monad[$FT]]"
-        val methods = ST.tpe.decls
+        val methods = ST.tpe.members
             .filter(m => m.isAbstract)
             .map(_.asMethod)
             .map { m =>

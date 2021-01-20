@@ -20,7 +20,7 @@ object ProviderProcessor {
     ): c.universe.Tree = {
         import c.universe._
         val fmonad = q"implicitly[_root_.cats.Monad[$FT]]"
-        val methodProcessors = ST.tpe.decls
+        val methodProcessors = ST.tpe.members
             .filter(m => m.isAbstract)
             .map(_.asMethod)
             .map { m =>
