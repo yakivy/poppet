@@ -22,12 +22,13 @@ object ConsumerProcessor {
             .filter(m => m.isAbstract)
             .map(_.asMethod)
             .map { m =>
+                val mInS = m.typeSignatureIn(ST.tpe)
                 val methodName = m.name
-                val arguments = m.paramLists.map(ps => ps.map(p => q"${Ident(p.name)}: ${p.typeSignature}"))
+                val arguments = mInS.paramLists.map(ps => ps.map(p => q"${Ident(p.name)}: ${p.typeSignature}"))
                 val codedArgument: c.universe.Symbol => Tree = a => q"""implicitly[
                     _root_.poppet.core.Coder[${a.typeSignature},${appliedType(FT.tpe, IT.tpe)}]
                 ].apply(${Ident(a.name)})"""
-                val withCodedArguments: Tree => Tree = tree => m.paramLists.flatten match {
+                val withCodedArguments: Tree => Tree = tree => mInS.paramLists.flatten match {
                     case Nil => tree
                     case h :: Nil =>
                         q"""$fmonad.flatMap(${codedArgument(h)})((${Ident(h.name)}: ${h.typeSignature}) => $tree)"""
@@ -37,7 +38,7 @@ object ConsumerProcessor {
                         )
                     )"""
                 }
-                q"""override def $methodName(...$arguments): ${m.returnType} = {
+                q"""override def $methodName(...$arguments): ${mInS.finalResultType} = {
                     val result = $fmonad.map(${withCodedArguments(q"""
                     client.apply(_root_.poppet.core.Request(
                         $serviceName, ${methodName.toString}, _root_.scala.Predef.Map(
@@ -46,7 +47,7 @@ object ConsumerProcessor {
                             )""")}
                         )
                     ))""")})(_.value)
-                    implicitly[_root_.poppet.core.Coder[${appliedType(FT.tpe, IT.tpe)}, ${m.returnType}]].apply(result)
+                    implicitly[_root_.poppet.core.Coder[${appliedType(FT.tpe, IT.tpe)}, ${mInS.finalResultType}]].apply(result)
                 }"""
             }.toList
         q"""(

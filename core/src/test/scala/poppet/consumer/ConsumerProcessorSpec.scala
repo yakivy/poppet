@@ -98,6 +98,22 @@ class ConsumerProcessorSpec extends FreeSpec {
                     )
                 ))
             }
+            "for traits with generic hierarchy" in {
+                trait C[X, Y] {
+                    def a0(b0: X): Int
+                    def a1: Y
+                }
+                trait D extends C[Boolean, Int]
+
+                val a: D = ConsumerProcessor[String, Id, D](client)
+
+                assert(a.a0(false) == 0 && request == Request(
+                    "poppet.consumer.ConsumerProcessorSpec.D", "a0", Map("b0" -> "false")
+                ))
+                assert(a.a1 == 0 && request == Request(
+                    "poppet.consumer.ConsumerProcessorSpec.D", "a1", Map.empty
+                ))
+            }
         }
         "when has future data kind, should generate instance" in {
             import cats.implicits._
