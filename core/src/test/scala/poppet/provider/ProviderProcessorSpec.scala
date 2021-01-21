@@ -94,6 +94,24 @@ class ProviderProcessorSpec extends FreeSpec {
                         && p(2).name == "a0" && p(2).arguments == List("b")
                         && p(2).f(Map("b" -> "false")) == "0")
                 }
+                "for traits with generic hierarchy" in {
+                    trait C[X, Y] {
+                        def a0(b0: X): Int
+                        def a1: Y
+                    }
+                    trait D extends C[Boolean, Int]
+                    val d: D = new D {
+                        override def a0(b0: Boolean): Int = b0.toInt
+                        override def a1: Int = 1
+                    }
+                    val p = ProviderProcessor[String, Id, D](d)
+                    assert(p(0).service == "poppet.provider.ProviderProcessorSpec.D"
+                        && p(0).name == "a1" && p(0).arguments == List.empty
+                        && p(0).f(Map.empty) == "1")
+                    assert(p(1).service == "poppet.provider.ProviderProcessorSpec.D"
+                        && p(1).name == "a0" && p(1).arguments == List("b0")
+                        && p(1).f(Map("b0" -> "true")) == "1")
+                }
             }
         }
         "when has future data kind" - {

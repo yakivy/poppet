@@ -24,11 +24,12 @@ object ProviderProcessor {
             .filter(m => m.isAbstract)
             .map(_.asMethod)
             .map { m =>
+                val mInS = m.typeSignatureIn(ST.tpe)
                 val argumentNames = m.paramLists.flatten.map(_.name.toString)
                 val codedArgument: c.universe.Symbol => Tree = a => q"""implicitly[
                     _root_.poppet.core.Coder[$IT,${appliedType(FT.tpe, a.typeSignature)}]
                 ].apply(as(${a.name.toString}))"""
-                val withCodedArguments: Tree => Tree = tree => m.paramLists.flatten match {
+                val withCodedArguments: Tree => Tree = tree => mInS.paramLists.flatten match {
                     case Nil => tree
                     case h :: Nil =>
                         q"$fmonad.flatMap(${codedArgument(h)})((${Ident(h.name)}: ${h.typeSignature}) => $tree)"
@@ -44,7 +45,7 @@ object ProviderProcessor {
                     ${m.name.toString},
                     _root_.scala.List(..$argumentNames),
                     as => ${withCodedArguments(q"""
-                        implicitly[_root_.poppet.core.Coder[${m.returnType},${appliedType(FT.tpe, IT.tpe)}]].apply(${
+                        implicitly[_root_.poppet.core.Coder[${mInS.finalResultType},${appliedType(FT.tpe, IT.tpe)}]].apply(${
                         groupedArguments.foldLeft[Tree](
                             q"service.${m.name.toTermName}")((acc, pl) => Apply(acc, pl)
                         )})
