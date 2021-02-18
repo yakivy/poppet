@@ -99,7 +99,15 @@ The library is build on following abstractions:
 - `poppet.Peek[I, F[_]]` - used to decorate request -> response function without changing the types. Good fit for logging.
 
 #### Logging
-Section in development...
+Both provider and consumer take `Peek[I, F]` as an argument, that allows to inject logging logic around the `Request[I] => F[Response[I]]` function. Let's define simple logging peek:
+```scala
+val peek: Peek[Json, Id] = f => request => {
+    println("Request: " + request)
+    val response = f(request)
+    println("Response: " + response)
+    response
+}
+``` 
 
 #### Failure handling
 All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple function from failure to result:
