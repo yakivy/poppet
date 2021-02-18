@@ -12,7 +12,7 @@ trait CirceCoderInstances extends CoderInstances {
         implicit d: Decoder[A], fh: FailureHandler[F[A]]
     ): Coder[Json, F[A]] = a => d(a.hcursor) match {
         case Right(value) => Applicative[F].pure(value)
-        case Left(value) => fh(new Failure(s"Decoding error: ${value.getMessage()}", value))
+        case Left(value) => fh(new DecodingFailure(value.getMessage(), a.hcursor.value, value))
     }
     implicit def encoderToCoder[A, F[_] : Applicative](
         implicit e: Encoder[A]

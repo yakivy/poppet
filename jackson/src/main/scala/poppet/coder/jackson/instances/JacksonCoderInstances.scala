@@ -25,9 +25,6 @@ trait JacksonCoderInstances extends CoderInstances {
     }
 
     implicit def toJsonCoder[A, F[_] : Applicative](
-        implicit mc: Coder[JsonNode, A]
-    ): Coder[JsonNode, F[A]] = a => Applicative[F].pure(mc(a))
-    implicit def fromJsonCoderF[A, F[_] : Applicative](
         implicit om: ObjectMapper
     ): Coder[A, F[JsonNode]] = a => Applicative[F].pure(om.valueToTree(a))
 

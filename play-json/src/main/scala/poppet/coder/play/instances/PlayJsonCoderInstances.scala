@@ -23,7 +23,7 @@ trait PlayJsonCoderInstances extends CoderInstances {
         implicit r: Reads[A], fh: FailureHandler[F[A]]
     ): Coder[JsValue, F[A]] = a => Monad[F].pure(r.reads(a).asEither).flatMap {
         case Right(value) => Monad[F].pure(value)
-        case Left(value) => fh(new Failure(s"Can't parse model: $value"))
+        case Left(value) => fh(new DecodingFailure(s"Can't decode model: $value", a))
     }
     implicit def writesToCoder[A, F[_] : Applicative](
         implicit w: Writes[A]
