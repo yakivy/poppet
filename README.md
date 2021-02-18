@@ -96,7 +96,7 @@ The library is build on following abstractions:
 - `poppet.consumer.Transport` - used to transfer the data between consumer and provider, technically it is just the functions from `I` to `I` lifted to passed data kind (`I => F[I]`). So you can use anything as long as it can receive/pass chosen data type;
 - `poppet.Coder` - used to code `I` to models and vice versa. It is probably the most complicated technique in the library since it is build on implicits, because of that, poppet comes with a bunch of modules, where you hopefully will find a favourite coder. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/main/scala/poppet/coder/circe/instances/CirceCoderInstances.scala);
 - `poppet.FailureHandler` - used to handle internal failures, more info you can find [here](#failure-handling);
-- `poppet.Peek[I, F[_]]` - used to decorate request -> response function without changing the types. Good fit for logging.
+- `poppet.Peek[I, F[_]]` - used to decorate request -> response function without changing the types. Good fit for logging, more info you can find [here](#logging).
 
 #### Logging
 Both provider and consumer take `Peek[I, F]` as an argument, that allows to inject logging logic around the `Request[I] => F[Response[I]]` function. Let's define simple logging peek:
