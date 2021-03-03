@@ -27,10 +27,6 @@ class Provider[I, F[_] : Monad](
                 _.map(m => m.arguments.sorted.mkString(",") -> m.f).toMap
             ).toMap
         ).toMap
-    require(
-        processors.size == indexedProcessors.values.flatMap(_.values).flatMap(_.values).size,
-        "Please use unique parameter name lists for overloaded methods."
-    )
 
     private def execute(request: Request[I]): F[Response[I]] = for {
         processor <- Monad[F].pure(
@@ -52,14 +48,8 @@ class Provider[I, F[_] : Monad](
         response <- scoder(output)
     } yield response
 
-    def service[S](s: S)(implicit processor: ProviderProcessor[I, F, S]) = {
-        val serviceProcessors = processor(s)
-        require(
-            serviceProcessors.nonEmpty,
-            "Passed service has no abstract methods. Are you sure that you passed trait as generic parameter?"
-        )
-        new Provider[I, F](peek, processors ::: serviceProcessors)
-    }
+    def service[S](s: S)(implicit processor: ProviderProcessor[I, F, S]) =
+        new Provider[I, F](peek, processors ::: processor(s))
 }
 
 object Provider {
