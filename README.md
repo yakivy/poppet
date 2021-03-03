@@ -27,7 +27,7 @@ Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 ### Quick start
 Put poppet dependency in the build file, as an example I'll take poppet with circe, let's assume you are using SBT:
 ```scala
-val poppetVersion = "0.1.1"
+val poppetVersion = "0.1.2"
 
 libraryDependencies ++= Seq(
     "com.github.yakivy" %% "poppet-circe" % poppetVersion, //to use circe
