@@ -20,20 +20,24 @@ Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 1. [Customizations](#customizations)
     1. [Logging](#logging)
     1. [Failure handling](#failure-handling)
-    1. [Authentication](#authentication)
 1. [Manual calls](#manual-calls)
+1. [Roadmap](#roadmap)
 1. [Examples](#examples)
 
 ### Quick start
-Put poppet dependency in the build file, as an example I'll take poppet with circe, let's assume you are using SBT:
+Put cats and poppet dependencies in the build file, as an example I'll take poppet with circe, let's assume you are using SBT:
 ```scala
-val poppetVersion = "0.1.2"
+val version = new {
+    cats = "2.0.0"
+    poppet = "0.1.2"
+}
 
 libraryDependencies ++= Seq(
-    "com.github.yakivy" %% "poppet-circe" % poppetVersion, //to use circe
-    //"com.github.yakivy" %% "poppet-play-json" % poppetVersion, //to use play json
-    //"com.github.yakivy" %% "poppet-jackson" % poppetVersion, //to use jackson
-    //"com.github.yakivy" %% "poppet-core" % poppetVersion, //to build custom coder
+    "org.typelevel" %% "cats-core" % version.cats,
+    "com.github.yakivy" %% "poppet-circe" % version.poppet, //to use circe
+    //"com.github.yakivy" %% "poppet-play-json" % version.poppet, //to use play json
+    //"com.github.yakivy" %% "poppet-jackson" % version.poppet, //to use jackson
+    //"com.github.yakivy" %% "poppet-core" % version.poppet, //to build custom coder
 )
 ```
 Define service trait and share it between provider and consumer services:
@@ -125,25 +129,6 @@ implicit def fh[A]: FailureHandler[SR[A]] = f => EitherT.leftT(f.getMessage)
 ```
 For more info you can check [Http4s with Circe](#examples) example project, it is built around `EitherT[IO, String, A]` kind.
 
-#### Authentication
-As the library is abstracted from the transferring protocol, you can inject whatever logic you want around the poppet provider/consumer. For example, you want to add simple authentication for the generated RPC endpoints... Firstly let's add authorization header check on provider side before provider invocation:
-```scala
-def provide(request: Request): Response = {
-    if (!request.headers.get("secret").contains(secret))
-        throw new IllegalArgumentException("Wrong secret!")
-    provider(request.body[Json]).map(Response(_))
-}
-```
-and then pass authorization header in the consumer transport:
-```scala
-private val transport: Transport[Future] = request => client
-    .url(url)
-    .withHttpHeaders("secret" -> secret)
-    .post(request)
-    .map(_.body[Json])
-```
-For more info you can check the [examples](#examples), all of them have simple authentication built on the same approach.
-
 ### Manual calls
 If your coder has a human readable format (JSON for example), you can use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of curl call:
 ```shell script
@@ -156,6 +141,11 @@ curl --location --request POST '${providerUrl}' \
     }
 }'
 ```
+
+### Roadmap
+- add more details to `Can't find processor` exception
+- make `FailureHandler` explicit
+- add Scala 3 support
 
 ### Examples
 - Http4s with Circe: https://github.com/yakivy/poppet/tree/master/example/http4s
