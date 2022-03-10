@@ -1,19 +1,9 @@
+os: linux
+dist: bionic
 language: scala
 
 jdk:
-  - openjdk11
-
-scala:
-  - 2.12.10
-  - 2.13.3
+  - openjdk8
 
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean coverage test coverageReport
-
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
-
-cache:
-  directories:
-    - $HOME/.ivy2/cache
-    - $HOME/.sbt/boot
+  - ./mill -i __.__.test
