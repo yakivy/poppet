@@ -12,7 +12,6 @@ Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 - no restricted kind `Future`, you can specify any monad (has `cats.Monad` typeclass) as a processor kind, and an arbitrary kind for trait methods
 - no forced codec dependencies `uPickle`, you can choose from predefined codecs or simply implement your own
 - robust failure handling mechanism
-- has a foundation for Scala 3 support (currently is blocked by https://github.com/lampepfl/dotty/pull/14124)
 
 ### Table of contents
 1. [Quick start](#quick-start)
