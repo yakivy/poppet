@@ -56,7 +56,7 @@ class UserInternalService extends UserService {
     }
 }
 ```
-Create service provider (can be created once and shared for all incoming calls), keep in mind that only abstract methods of the service type will be exposed, that's why you need to explicitly specify trait type:
+Create service provider (can be created once and shared for all incoming calls), keep in mind that only abstract methods of the service type will be exposed, so you need to explicitly specify a trait type:
 ```scala
 import cats.implicits._
 import io.circe._
@@ -96,9 +96,9 @@ userService.findById("1")
 ### Customizations
 The library is build on following abstractions:
 - `[F[_]]` - is your service data kind, can be any monad (has `cats.Monad` typeclass);
-- `[I]` - is an intermediate data type what your coding framework works with, can be any serialization format, but it would be easier to choose from existed codec modules as they come with a bunch of predefined codecs;
+- `[I]` - is an intermediate data type that your coding framework works with, can be any serialization format, but it would be easier to choose from existed codec modules as they come with a bunch of predefined codecs;
 - `poppet.consumer.Transport` - used to transfer the data between consumer and provider apps, technically it is just a function from `[I]` to `[F[I]]`, so you can use anything as long as it can receive/pass the chosen data type;
-- `poppet.Codec` - used to convert `[I]` to domain models and vice versa. Poppet comes with a bunch of modules, where you will hopefully find a favourite codec. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/main/scala/poppet/codec/circe/instances/CirceCoderInstances.scala);
+- `poppet.Codec` - used to convert `[I]` to domain models and vice versa. Poppet comes with a bunch of modules, where you will hopefully find a favourite codec. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/poppet/codec/circe/instances/CirceCodecInstances.scala);
 - `poppet.CodecK` - used to convert method return kind to `[F]` and vice versa. It's needed only if return kind differs from your service kind, compilation errors will hint you what codecs are absent;
 - `poppet.FailureHandler[F[_]]` - used to handle internal failures, more info you can find [here](#failure-handling);
 - `poppet.Peek[F[_], I]` - used to decorate request -> response function. Good fit for logging, more info you can find [here](#logging).
@@ -157,7 +157,7 @@ curl --location --request POST '${providerUrl}' \
     - Play Framework with Play Json: https://github.com/yakivy/poppet/tree/master/example/play
         - run provider: `./mill example.play.provider.run`
         - run consumer: `./mill example.play.consumer.run`
-        - remove `RUNNING_PID` file manually if one service conflicting with another
+        - remove `RUNNING_PID` file manually if services are conflicting with each other
     - And even Spring Framework with Jackson 😲: https://github.com/yakivy/poppet/tree/master/example/spring
         - run provider: `sbt "; project springProviderExample; run"`
         - run consumer: `sbt "; project springConsumerExample; run"`
