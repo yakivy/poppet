@@ -1,6 +1,7 @@
 package poppet.consumer
 
 import cats._
+import cats.data.EitherT
 import org.scalatest.freespec.AsyncFreeSpec
 import poppet.consumer.core.ConsumerProcessor
 import poppet.core.ProcessorSpec
@@ -143,17 +144,44 @@ class ConsumerProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                     "poppet.core.ProcessorSpec.Simple", "a2", Map("b0" -> "true", "b1" -> "false")
                 ))
             }
+            "when has complex data kind" in {
+                import cats.implicits._
+
+                implicit val ck: CodecK[WithComplexReturnTypes.ReturnType, cats.Id] =
+                    new CodecK[WithComplexReturnTypes.ReturnType, cats.Id] {
+                        override def apply[A](a: WithComplexReturnTypes.ReturnType[A]): Id[A] =
+                            a.value.value.get.get.toOption.get
+                    }
+
+                val p = ConsumerProcessor[WithComplexReturnTypes.ReturnType, String, WithComplexReturnTypes].apply(
+                    r => {
+                        request = r
+                        EitherT.pure(Response("0"))
+                    },
+                    FailureHandler.throwing
+                )
+
+                def result[A](value: WithComplexReturnTypes.ReturnType[A]): A =
+                    value.value.value.get.get.toOption.get
+
+                assert(result(p.a0(true)) == 0 && request == Request(
+                    "poppet.core.ProcessorSpec.WithComplexReturnTypes", "a0", Map("b" -> "true")
+                ))
+                assert(result(p.a1(true, false)) == 0 && request == Request(
+                    "poppet.core.ProcessorSpec.WithComplexReturnTypes", "a1", Map("b0" -> "true", "b1" -> "false")
+                ))
+            }
             "when has A data kind and service has B data kind" in {
                 import cats.implicits._
 
                 type F[A] = Option[A]
-                type G[A] = Either[String, A]
+                type G[A] = WithComplexReturnTypes.ReturnType[A]
 
                 implicit val ck0: CodecK[F, G] = new CodecK[F, G] {
-                    override def apply[A](a: F[A]): G[A] = a.toRight("not found")
+                    override def apply[A](a: F[A]): G[A] = EitherT.fromEither(a.toRight("not found"))
                 }
                 implicit val ck1: CodecK[G, F] = new CodecK[G, F] {
-                    override def apply[A](a: G[A]): F[A] = a.toOption
+                    override def apply[A](a: G[A]): F[A] = a.value.value.get.get.toOption
                 }
 
                 val p = ConsumerProcessor[F, String, WithComplexReturnTypes].apply(
@@ -164,8 +192,14 @@ class ConsumerProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                     FailureHandler.throwing
                 )
 
-                assert(p.a(true) == Right(0) && request == Request(
-                    "poppet.core.ProcessorSpec.WithComplexReturnTypes", "a", Map("b" -> "true")
+                def result[A](value: WithComplexReturnTypes.ReturnType[A]): A =
+                    value.value.value.get.get.toOption.get
+
+                assert(result(p.a0(true)) == 0 && request == Request(
+                    "poppet.core.ProcessorSpec.WithComplexReturnTypes", "a0", Map("b" -> "true")
+                ))
+                assert(result(p.a1(true, true)) == 0 && request == Request(
+                    "poppet.core.ProcessorSpec.WithComplexReturnTypes", "a1", Map("b0" -> "true", "b1" -> "true")
                 ))
             }
         }

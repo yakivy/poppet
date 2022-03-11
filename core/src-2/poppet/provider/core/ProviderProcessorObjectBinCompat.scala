@@ -28,7 +28,7 @@ object ProviderProcessorObjectBinCompat {
                 case h :: Nil =>
                     q"$fmonad.flatMap(${codedArgument(h)})((${Ident(h.name)}: ${h.typeSignature}) => $tree)"
                 case hs => q"""$fmonad.flatten(
-                    _root_.cats.Semigroupal.${TermName("map" + hs.size)}(..${hs.map(codedArgument)})(
+                    $fmonad.${TermName("map" + hs.size)}(..${hs.map(codedArgument)})(
                         ..${hs.map(h => q"${Ident(h.name)}: ${h.typeSignature}")} => $tree
                     )
                 )"""
@@ -51,7 +51,7 @@ object ProviderProcessorObjectBinCompat {
                     ].apply(_).fold($$fh.apply, $fmonad.pure))
                 """)}
             )"""
-        }.toList
+        }
         c.Expr(q"(($$service, $$fh) => $methodProcessors)")
     }
 }

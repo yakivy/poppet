@@ -8,7 +8,7 @@ import mill.scalalib.publish._
 import mill.playlib._
 
 object versions {
-    val publish = "0.2.0"
+    val publish = "0.2.1"
 
     val scala212 = "2.12.15"
     val scala213 = "2.13.8"

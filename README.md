@@ -27,7 +27,7 @@ Put cats and poppet dependencies in the build file, let's assume you are using S
 ```scala
 val version = new {
     cats = "2.6.1"
-    poppet = "0.2.0"
+    poppet = "0.2.1"
 }
 
 libraryDependencies ++= Seq(
@@ -162,6 +162,9 @@ curl --location --request POST '${providerUrl}' \
         - run consumer: `sbt "; project springConsumerExample; run"`
 - put `http://localhost:9002/api/user/1` in the address bar
 ### Changelog
+
+#### 0.2.1:
+- fix processor compilation for complex types
 
 #### 0.2.0:
 - migrate to mill build tool

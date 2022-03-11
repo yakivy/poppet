@@ -1,6 +1,7 @@
 package poppet.provider
 
 import cats._
+import cats.data.EitherT
 import org.scalatest.freespec.AsyncFreeSpec
 import poppet.core.ProcessorSpec
 import poppet.provider.core.ProviderProcessor
@@ -16,6 +17,12 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
             override def a00(): List[Int] = List(1)
             override def a1(b: Boolean): SimpleDto = SimpleDto(2)
             override def a2(b0: Boolean, b1: Boolean): Id[List[String]] = List((b0.toInt + b1.toInt).toString)
+        }
+        val withComplexReturnTypesImpl = new WithComplexReturnTypes {
+            override def a0(b: Boolean): WithComplexReturnTypes.ReturnType[Int] =
+                EitherT.fromEither(Right(b.toInt))
+            override def a1(b0: Boolean, b1: Boolean): WithComplexReturnTypes.ReturnType[Int] =
+                EitherT.fromEither(Right(b0.toInt + b1.toInt))
         }
 
         "should generate instance" - {
@@ -142,6 +149,22 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                         && result == "List(2)")
                 )
             }
+            "when has complex data kind" in {
+                import cats.implicits._
+
+                val p = ProviderProcessor[WithComplexReturnTypes.ReturnType, String, WithComplexReturnTypes]
+                    .apply(withComplexReturnTypesImpl, FailureHandler.throwing)
+
+                def result[A](value: WithComplexReturnTypes.ReturnType[A]): A =
+                    value.value.value.get.get.toOption.get
+
+                assert(p(0).service == "poppet.core.ProcessorSpec.WithComplexReturnTypes"
+                    && p(0).name == "a0" && p(0).arguments == List("b")
+                    && result(p(0).f(Map("b" -> "true"))) == "1")
+                assert(p(1).service == "poppet.core.ProcessorSpec.WithComplexReturnTypes"
+                    && p(1).name == "a1" && p(1).arguments == List("b0", "b1")
+                    && result(p(1).f(Map("b0" -> "true", "b1" -> "true"))) == "2")
+            }
             "when has A data kind and service has B data kind" in {
                 import scala.util.Try
                 import cats.implicits._
@@ -150,23 +173,23 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                 type G[A] = WithComplexReturnTypes.ReturnType[A]
 
                 implicit val ck0: CodecK[F, G] = new CodecK[F, G] {
-                    override def apply[A](a: F[A]): G[A] = a.toRight("not found")
+                    override def apply[A](a: F[A]): G[A] = EitherT.fromEither(a.toRight("not found"))
                 }
                 implicit val ck1: CodecK[G, F] = new CodecK[G, F] {
-                    override def apply[A](a: G[A]): F[A] = a.toOption
+                    override def apply[A](a: G[A]): F[A] = a.value.value.get.get.toOption
                 }
 
-                val c = new WithComplexReturnTypes {
-                    override def a(b: Boolean): WithComplexReturnTypes.ReturnType[Int] = Right(b.toInt)
-                }
-
-                val p = ProviderProcessor[F, String, WithComplexReturnTypes].apply(c, FailureHandler.throwing)
+                val p = ProviderProcessor[F, String, WithComplexReturnTypes]
+                    .apply(withComplexReturnTypesImpl, FailureHandler.throwing)
 
                 def result[A](value: F[A]): A = value.get
 
                 assert(p(0).service == "poppet.core.ProcessorSpec.WithComplexReturnTypes"
-                    && p(0).name == "a" && p(0).arguments == List("b")
+                    && p(0).name == "a0" && p(0).arguments == List("b")
                     && result(p(0).f(Map("b" -> "true"))) == "1")
+                assert(p(1).service == "poppet.core.ProcessorSpec.WithComplexReturnTypes"
+                    && p(1).name == "a1" && p(1).arguments == List("b0", "b1")
+                    && result(p(1).f(Map("b0" -> "true", "b1" -> "true"))) == "2")
             }
         }
         "shouldn't generate instance" - {

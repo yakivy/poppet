@@ -1,6 +1,7 @@
 package poppet.core
 
 import cats.Id
+import cats.data.EitherT
 import org.scalatest.Assertion
 import org.scalatest.exceptions.TestFailedException
 import poppet.PoppetSpec
@@ -34,11 +35,12 @@ trait ProcessorSpec extends PoppetSpec {
     }
     trait WithParentWithParameters extends WithParameters[Boolean, Int]
     trait WithComplexReturnTypes {
-        def a(b: Boolean): WithComplexReturnTypes.ReturnType[Int]
+        def a0(b: Boolean): WithComplexReturnTypes.ReturnType[Int]
+        def a1(b0: Boolean, b1: Boolean): WithComplexReturnTypes.ReturnType[Int]
         //def b: Either[String, Int]
     }
     object WithComplexReturnTypes {
-        type ReturnType[A] = Either[String, A]
+        type ReturnType[A] = EitherT[Future, String, A]
     }
 
     trait WithMethodWithParameters {
