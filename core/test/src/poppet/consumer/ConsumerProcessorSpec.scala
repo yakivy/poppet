@@ -244,6 +244,20 @@ class ConsumerProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                         "Unable to convert cats.Id[String] to Int. Try to provide poppet.Codec[String,Int].",
                     )
                 }
+                "for valid trait with ambiguous simple codec" in {
+                    implicit val c0: Codec[String, Int] = a => Right(a.toInt)
+                    implicit val c1: Codec[String, Int] = c0
+                    assertCompilationErrorMessage(
+                        assertCompiles(
+                            """ConsumerProcessor[Id, String, Simple]
+                              |    .apply(_ => ???, FailureHandler.throwing)""".stripMargin
+                        ),
+                        """ambiguous implicit values:
+                          | both value c1 of type poppet.consumer.Codec[String,Int]
+                          | and value c0 of type poppet.consumer.Codec[String,Int]
+                          | match expected type poppet.Codec[String,Int]""".stripMargin,
+                    )
+                }
                 "for valid trait without codec for type with argument" in {
                     implicit val c0: Codec[String, Int] = a => Right(a.toInt)
                     assertCompilationErrorMessage(

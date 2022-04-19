@@ -8,11 +8,11 @@ import mill.scalalib.publish._
 import mill.playlib._
 
 object versions {
-    val publish = "0.2.1"
+    val publish = "0.2.2"
 
     val scala212 = "2.12.15"
     val scala213 = "2.13.8"
-    val scala3 = "3.1.1"
+    val scala3 = "3.1.2"
     val scalaJs = "1.9.0"
     val scalaNative = "0.4.3"
     val scalatest = "3.2.9"
@@ -21,7 +21,7 @@ object versions {
     val upickle = "1.4.3"
     val circe = "0.14.1"
     val playJson = "2.9.2"
-    val jackson = "2.11.1"
+    val jackson = "2.13.2"
 
     val catsEffect = "3.3.5"
     val http4s = "0.23.9"
@@ -196,7 +196,7 @@ object `play-json` extends Module {
         }
     }
 
-    object jvm extends Cross[JvmModule](versions.cross: _*)
+    object jvm extends Cross[JvmModule](versions.cross2: _*)
     class JvmModule(val crossScalaVersion: String) extends CommonModule with CommonPublishJvmModule {
         override def moduleDeps = super.moduleDeps ++ Seq(core.jvm())
         object test extends CommonModuleTests with CommonPublishCrossModuleTests {
@@ -204,7 +204,7 @@ object `play-json` extends Module {
         }
     }
 
-    object js extends Cross[JsModule](versions.cross: _*)
+    object js extends Cross[JsModule](versions.cross2: _*)
     class JsModule(val crossScalaVersion: String) extends CommonModule with CommonPublishJsModule {
         override def moduleDeps = super.moduleDeps ++ Seq(core.js())
         object test extends CommonModuleTests with CommonPublishCrossModuleTests {

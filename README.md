@@ -27,7 +27,7 @@ Put cats and poppet dependencies in the build file, let's assume you are using S
 ```scala
 val version = new {
     cats = "2.6.1"
-    poppet = "0.2.1"
+    poppet = "0.2.2"
 }
 
 libraryDependencies ++= Seq(
@@ -100,7 +100,7 @@ The library is build on following abstractions:
 - `poppet.Codec` - used to convert `[I]` to domain models and vice versa. Poppet comes with a bunch of modules, where you will hopefully find a favourite codec. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/poppet/codec/circe/instances/CirceCodecInstances.scala);
 - `poppet.CodecK` - used to convert method return kind to `[F]` and vice versa. It's needed only if return kind differs from your service kind, compilation errors will hint you what codecs are absent;
 - `poppet.FailureHandler[F[_]]` - used to handle internal failures, more info you can find [here](#failure-handling);
-- `poppet.Peek[F[_], I]` - used to decorate request -> response function. Good fit for logging, more info you can find [here](#logging).
+- `poppet.Peek[F[_], I]` - used to decorate a function from `Request[I]` to `F[Response[I]]`. Good fit for logging, more info you can find [here](#logging).
 
 #### Logging
 Both provider and consumer take `Peek[F, I]` as an argument, that allows to inject logging logic around the `Request[I] => F[Response[I]]` function. Let's define simple logging peek:
@@ -158,10 +158,13 @@ curl --location --request POST '${providerUrl}' \
         - run consumer: `./mill example.play.consumer.run`
         - remove `RUNNING_PID` file manually if services are conflicting with each other
     - And even Spring Framework with Jackson 😲: https://github.com/yakivy/poppet/tree/master/example/spring
-        - run provider: `sbt "; project springProviderExample; run"`
-        - run consumer: `sbt "; project springConsumerExample; run"`
+        - run provider: `./mill example.spring.provider.run`
+        - run consumer: `./mill example.spring.consumer.run`
 - put `http://localhost:9002/api/user/1` in the address bar
 ### Changelog
+
+#### 0.2.2:
+- fix compilation error message for ambiguous implicits
 
 #### 0.2.1:
 - fix processor compilation for complex types

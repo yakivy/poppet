@@ -1,6 +1,7 @@
 package poppet.core
 
 import scala.quoted._
+import poppet._
 
 object ProcessorMacro {
     def getAbstractMethods[S: Type](using q: Quotes): List[q.reflect.DefDef] = {
@@ -22,12 +23,14 @@ object ProcessorMacro {
     }
 
     def separateReturnType(
-        using q: Quotes)(fType: q.reflect.TypeRepr, returnType: q.reflect.TypeRepr
+        using q: Quotes)(fType: q.reflect.TypeRepr, returnType: q.reflect.TypeRepr, fromReturn: Boolean
     ): (q.reflect.TypeRepr, q.reflect.TypeRepr) = {
         import q.reflect._
         (returnType match {
             case AppliedType(tycon, List(arg)) =>
-                TypeRepr.of[CodecK].appliedTo(List(tycon, fType)).asType match { case '[ct] =>
+                TypeRepr.of[CodecK].appliedTo(
+                    if (fromReturn) List(tycon, fType) else List(fType, tycon)
+                ).asType match { case '[ct] =>
                     Expr.summon[ct].map(_ => tycon -> arg)
                 }
             case _ => None
@@ -44,8 +47,8 @@ object ProcessorMacro {
 
     def inferReturnCodecs(
         using q: Quotes)(
-        fType: q.reflect.TypeRepr, faType: q.reflect.TypeRepr,
-        tType: q.reflect.TypeRepr, taType: q.reflect.TypeRepr
+        fType: q.reflect.TypeRepr, faType: q.reflect.TypeRepr, ffaType: q.reflect.TypeRepr,
+        tType: q.reflect.TypeRepr, taType: q.reflect.TypeRepr, ttaType: q.reflect.TypeRepr,
     ): (q.reflect.Term, q.reflect.Term) = {
         import q.reflect._
         (
@@ -55,12 +58,53 @@ object ProcessorMacro {
         ) match { case ('[ckt], '[ct], '[fa], '[ta]) =>
             val codecK = Expr.summon[ckt]
             val codec = Expr.summon[ct]
+            val ttaTypeConstructorAndArgs = ttaType match {
+                case AppliedType(tycon, args) => Option(tycon -> args)
+                case _ => None
+            }
+            val ffaTypeConstructorAndArgs = ffaType match {
+                case AppliedType(tycon, args) => Option(tycon -> args)
+                case _ => None
+            }
             if (codecK.nonEmpty && codec.nonEmpty) (codecK.get.asTerm, codec.get.asTerm)
             else report.throwError(
-                s"Unable to convert ${TypeRepr.of[fa]} to ${TypeRepr.of[ta]}. Try to provide " +
-                s"${if (codecK.isEmpty) TypeRepr.of[ckt] else ""}" +
-                (if (codecK.isEmpty && codec.isEmpty) " and " else "") +
-                s"${if (codec.isEmpty) TypeRepr.of[ct] else "" }"
+                s"Unable to convert ${ffaType.show} to ${ttaType.show}. Try to provide " +
+                    (if (codecK.isEmpty) s"poppet.CodecK[${fType.show},${tType.show}]" else "") +
+                    (if (codecK.isEmpty && codec.isEmpty) " with " else "") +
+                    (if (codec.isEmpty) s"poppet.Codec[${faType.show},${taType.show}] opa: ${TypeRepr.of[ct].show}" else "") +
+                    (if (
+                        !ttaTypeConstructorAndArgs.exists(_._1 =:= TypeRepr.of[cats.Id]) &&
+                        tType =:= TypeRepr.of[cats.Id] &&
+                        taTypeArgs.exists(_.size == 1)
+                    ) {
+                        val stType = taType match {
+                            case AppliedType(tycon, _) => Option(tycon)
+                            case _ => None
+                        }
+                        val staType = taType.typeArgs.head
+                        val scodec = TypeRepr.of[Codec].appliedTo(List(faType, staType)).asType match {
+                            case ('[t]) => Expr.summon[t]
+                        }
+                        s" or poppet.CodecK[${fType.show},${stType.get.show}]" +
+                            (if (scodec.isEmpty) s" with poppet.Codec[${faType.show},${staType.show}]" else "")
+                    } else "") +
+                    (if (
+                        !ttaTypeConstructor.exists(_ =:= TypeRepr.of[cats.Id]) &&
+                        fType =:= TypeRepr.of[cats.Id] &&
+                        faType.typeArgs.size == 1
+                    ) {
+                        val stType = faType match {
+                            case AppliedType(tycon, _) => Option(tycon)
+                            case _ => None
+                        }
+                        val staType = faType.typeArgs.head
+                        val scodec = TypeRepr.of[Codec].appliedTo(List(staType, taType)).asType match {
+                            case ('[t]) => Expr.summon[t]
+                        }
+                        s" or poppet.CodecK[${stType.get.show},${tType.show}]" +
+                            (if (scodec.isEmpty) s" with poppet.Codec[${staType.show},${taType.show}]" else "")
+                    } else "") +
+                    "."
             )
         }
 

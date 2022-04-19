@@ -1,5 +1,6 @@
 package poppet.core
 
+import scala.reflect.macros.TypecheckException
 import scala.reflect.macros.blackbox
 
 object ProcessorMacro {
@@ -18,20 +19,24 @@ object ProcessorMacro {
 
     def inferImplicit[A: c.universe.Liftable](c: blackbox.Context)(tpe: A): Option[c.Tree] = {
         import c.universe._
-        c.typecheck(q"""_root_.scala.Predef.implicitly[$tpe]""", silent = true) match {
+        try c.typecheck(q"""_root_.scala.Predef.implicitly[$tpe]""") match {
             case EmptyTree => None
             case tree => Option(tree)
+        }
+        catch {
+            case e: TypecheckException if e.msg.contains("could not find implicit value for") => None
+            case e: TypecheckException => c.abort(c.enclosingPosition, e.msg)
         }
     }
 
     def separateReturnType(
-        c: blackbox.Context)(fType: c.Type, returnType: c.Type, provider: Boolean
+        c: blackbox.Context)(fType: c.Type, returnType: c.Type, fromReturn: Boolean
     ): (c.Type, c.Type) = {
         import c.universe._
         val typeArgs = returnType.typeArgs
         (if (typeArgs.size == 1) {
             ProcessorMacro.inferImplicit(c)(
-                if (provider) tq"_root_.poppet.CodecK[${returnType.typeConstructor}, $fType]"
+                if (fromReturn) tq"_root_.poppet.CodecK[${returnType.typeConstructor}, $fType]"
                 else tq"_root_.poppet.CodecK[$fType,${returnType.typeConstructor}]"
             ).map(_ => returnType.typeConstructor -> typeArgs.last)
         } else None).getOrElse(typeOf[cats.Id[_]].typeConstructor -> returnType)

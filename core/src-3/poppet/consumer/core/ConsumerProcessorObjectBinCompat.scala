@@ -34,9 +34,10 @@ object ConsumerProcessorObjectBinCompat {
                     )
                 )}
             )
-            val (returnKind, returnType) = ProcessorMacro.separateReturnType(TypeRepr.of[F], m.returnTpt.tpe)
+            val (returnKind, returnType) = ProcessorMacro.separateReturnType(TypeRepr.of[F], m.returnTpt.tpe, false)
             val (returnKindCodec, returnTypeCodec) = ProcessorMacro.inferReturnCodecs(
-                TypeRepr.of[F], TypeRepr.of[I], returnKind, returnType
+                TypeRepr.of[F], TypeRepr.of[I], TypeRepr.of[F[I]],
+                returnKind, returnType, m.returnTpt.tpe,
             )
             (returnType.asType) match { case '[rt] =>
                 DefDef.copy(m)(m.name, m.paramss, m.returnTpt, Option(Apply(TypeApply(

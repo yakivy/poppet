@@ -35,9 +35,10 @@ object ProviderProcessorObjectBinCompat {
                     )}
                 )
             }
-            val (returnKind, returnType) = ProcessorMacro.separateReturnType(TypeRepr.of[F], m.returnTpt.tpe)
+            val (returnKind, returnType) = ProcessorMacro.separateReturnType(TypeRepr.of[F], m.returnTpt.tpe, true)
             val (returnKindCodec, returnTypeCodec) = ProcessorMacro.inferReturnCodecs(
-                returnKind, returnType, TypeRepr.of[F], TypeRepr.of[I]
+                returnKind, returnType, m.returnTpt.tpe,
+                TypeRepr.of[F], TypeRepr.of[I], TypeRepr.of[F[I]],
             )
             returnType.asType match { case '[rt] =>
                 def callService(input: Expr[Map[String, I]]): Expr[F[I]] = '{$MF.flatMap(
