@@ -8,30 +8,30 @@ import mill.scalalib.publish._
 import mill.playlib._
 
 object versions {
-    val publish = "0.2.2"
+    val publish = "0.3.0"
 
-    val scala212 = "2.12.15"
-    val scala213 = "2.13.8"
-    val scala3 = "3.1.2"
-    val scalaJs = "1.9.0"
-    val scalaNative = "0.4.3"
-    val scalatest = "3.2.9"
-    val cats = "2.6.1"
+    val scala212 = "2.12.17"
+    val scala213 = "2.13.10"
+    val scala3 = "3.2.1"
+    val scalaJs = "1.11.0"
+    val scalaNative = "0.4.8"
+    val scalatest = "3.2.14"
+    val cats = "2.9.0"
 
-    val upickle = "1.4.3"
-    val circe = "0.14.1"
-    val playJson = "2.9.2"
-    val jackson = "2.13.2"
+    val upickle = "2.0.0"
+    val circe = "0.14.3"
+    val playJson = "2.9.3"
+    val jackson = "2.13.4"
 
-    val catsEffect = "3.3.5"
-    val http4s = "0.23.9"
-    val play = "2.8.13"
-    val logback = "1.2.3"
-    val springBoot = "2.3.1.RELEASE"
+    val catsEffect = "3.4.1"
+    val http4s = "0.23.12"
+    val play = "2.8.18"
+    val logback = "1.2.11"
+    val springBoot = "2.7.5"
 
     val cross2 = Seq(scala212, scala213)
     val cross3 = Seq(scala3)
-    val cross = cross2/* ++ cross3*/
+    val cross = cross2 ++ cross3
 }
 
 trait CommonPublishModule extends PublishModule with CrossScalaModule {
@@ -51,6 +51,10 @@ trait CommonPublishModule extends PublishModule with CrossScalaModule {
         else Agg(ivy"org.scala-lang:scala-reflect:${scalaVersion()}")
     )
     override def millSourcePath = super.millSourcePath / os.up
+    override def scalacOptions = super.scalacOptions() ++ (
+        if (crossScalaVersion == versions.scala3) Seq("-Xcheck-macros", "-explain")
+        else Seq.empty[String]
+    )
 }
 
 trait CommonPublishTestModule extends ScalaModule with TestModule {
@@ -242,13 +246,13 @@ object jackson extends Module {
 object example extends Module {
     object http4s extends Module {
         trait CommonModule extends ScalaModule {
-            override def scalaVersion = versions.scala213
+            override def scalaVersion = versions.scala3
             override def ivyDeps = super.ivyDeps() ++ Agg(
                 ivy"org.typelevel::cats-core::${versions.cats}",
                 ivy"org.typelevel::cats-effect::${versions.catsEffect}",
                 ivy"io.circe::circe-generic::${versions.circe}",
             )
-            override def moduleDeps = super.moduleDeps ++ Seq(circe.jvm(versions.scala213))
+            override def moduleDeps = super.moduleDeps ++ Seq(circe.jvm(versions.scala3))
         }
         object api extends CommonModule
         object consumer extends CommonModule {
@@ -304,15 +308,18 @@ object example extends Module {
                 ivy"com.fasterxml.jackson.module::jackson-module-scala::${versions.jackson}",
             )
             override def moduleDeps = super.moduleDeps ++ Seq(jackson.jvm(versions.scala213))
+            override def javacOptions = Seq("-source", "1.8", "-target", "1.8")
         }
         object api extends CommonModule
         object consumer extends CommonModule {
+            override def finalMainClass = "poppet.example.spring.consumer.Application"
             override def ivyDeps = super.ivyDeps() ++ Agg(
                 ivy"org.springframework.boot:spring-boot-starter-web:${versions.springBoot}",
             )
             override def moduleDeps = super.moduleDeps ++ Seq(api)
         }
         object provider extends CommonModule {
+            override def finalMainClass = "poppet.example.spring.provider.Application"
             override def ivyDeps = super.ivyDeps() ++ Agg(
                 ivy"org.springframework.boot:spring-boot-starter-web:${versions.springBoot}",
             )

@@ -1,4 +1,4 @@
-package poppet.example.spring.controller;
+package poppet.example.spring.consumer.controller;
 
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;

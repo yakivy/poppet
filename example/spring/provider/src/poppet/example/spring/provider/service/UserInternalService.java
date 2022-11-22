@@ -1,7 +1,8 @@
-package poppet.example.spring.service;
+package poppet.example.spring.provider.service;
 
 import org.springframework.stereotype.Service;
 import poppet.example.spring.model.User;
+import poppet.example.spring.service.UserService;
 
 @Service
 public class UserInternalService implements UserService {

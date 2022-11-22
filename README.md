@@ -12,6 +12,7 @@ Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 - no restricted kind `Future`, you can specify any monad (has `cats.Monad` typeclass) as a processor kind, and an arbitrary kind for trait methods
 - no forced codec dependencies `uPickle`, you can choose from predefined codecs or simply implement your own
 - robust failure handling mechanism
+- supports Scala 3 (method/class generation with macros is still an experimental feature)
 
 ### Table of contents
 1. [Quick start](#quick-start)
@@ -27,12 +28,13 @@ Put cats and poppet dependencies in the build file, let's assume you are using S
 ```scala
 val version = new {
     cats = "2.6.1"
-    poppet = "0.2.2"
+    poppet = "0.3.0"
 }
 
 libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % version.cats,
     "com.github.yakivy" %% "poppet-circe" % version.poppet, //to use circe
+    //"com.github.yakivy" %% "poppet-upickle" % version.poppet, //to use upickle
     //"com.github.yakivy" %% "poppet-play-json" % version.poppet, //to use play json
     //"com.github.yakivy" %% "poppet-jackson" % version.poppet, //to use jackson
     //"com.github.yakivy" %% "poppet-core" % version.poppet, //to build custom codec
@@ -162,6 +164,9 @@ curl --location --request POST '${providerUrl}' \
         - run consumer: `./mill example.spring.consumer.run`
 - put `http://localhost:9002/api/user/1` in the address bar
 ### Changelog
+
+#### 0.3.0:
+- add Scala 3 support
 
 #### 0.2.2:
 - fix compilation error message for ambiguous implicits

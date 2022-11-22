@@ -4,6 +4,7 @@ import cats._
 import cats.data.EitherT
 import org.scalatest.freespec.AsyncFreeSpec
 import poppet.core.ProcessorSpec
+import poppet.core.ProcessorSpec._
 import poppet.provider.core.ProviderProcessor
 import scala.concurrent.Future
 
@@ -196,51 +197,48 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
             "when has id data kind" - {
                 "for trait with generic methods" in {
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Id, String, WithMethodWithParameters]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Id, String, WithMethodWithParameters]"""),
                         "Generic methods are not supported: " +
-                            "ProviderProcessorSpec.this.WithMethodWithParameters.a"
+                            "poppet.core.ProcessorSpec.WithMethodWithParameters.a"
                     )
                 }
                 "for trait without abstract methods" in {
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Id, String, WithNoAbstractMethods]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
-                        "ProviderProcessorSpec.this.WithNoAbstractMethods has no abstract methods. " +
+                        assertCompiles("""ProviderProcessor[Id, String, WithNoAbstractMethods]"""),
+                        "poppet.core.ProcessorSpec.WithNoAbstractMethods has no abstract methods. " +
                             "Make sure that service method is parametrized with a trait."
                     )
                 }
                 "for trait with conflicting methods" in {
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Id, String, WithConflictedMethods]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Id, String, WithConflictedMethods]"""),
                         "Use unique argument name lists for overloaded methods.",
+                    )
+                }
+                "for trait with abstract type" in {
+                    assertCompilationErrorMessage(
+                        assertCompiles("""ProviderProcessor[Id, String, WithAbstractType]"""),
+                        "Abstract types are not supported: " +
+                            "poppet.core.ProcessorSpec.WithAbstractType.A"
                     )
                 }
                 "for valid trait without simple codec" in {
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Id, String, Simple]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Id, String, Simple]"""),
                         "Unable to convert Int to cats.Id[String]. Try to provide poppet.Codec[Int,String].",
+                        "Unable to convert scala.Int to cats.Id[scala.Predef.String]. " +
+                            "Try to provide poppet.Codec[scala.Int,scala.Predef.String].",
                     )
                 }
                 "for valid trait without codec for type with argument" in {
                     implicit val c0: Codec[Int, String] = a => Right(a.toString)
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Id, String, Simple]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Id, String, Simple]"""),
                         "Unable to convert List[Int] to cats.Id[String]. " +
                             "Try to provide poppet.Codec[List[Int],String] or poppet.CodecK[List,cats.Id].",
+                        "Unable to convert scala.collection.immutable.List[scala.Int] to cats.Id[scala.Predef.String]. " +
+                            "Try to provide poppet.Codec[scala.collection.immutable.List[scala.Int],scala.Predef.String] or " +
+                            "poppet.CodecK[scala.collection.immutable.List,cats.Id].",
                     )
                 }
                 "for valid trait without codec for simple type with explicit Id kind" in {
@@ -248,23 +246,22 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                     implicit val c1: Codec[List[Int], String] = a => Right(a.toString)
                     implicit val c2: Codec[SimpleDto, String] = a => Right(a.toString)
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Id, String, Simple]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Id, String, Simple]"""),
                         "Unable to convert cats.Id[List[String]] to cats.Id[String]. " +
                             "Try to provide poppet.Codec[List[String],String].",
+                        "Unable to convert cats.Id[scala.collection.immutable.List[scala.Predef.String]] to cats.Id[scala.Predef.String]. " +
+                            "Try to provide poppet.Codec[scala.collection.immutable.List[scala.Predef.String],scala.Predef.String].",
                     )
                 }
                 "for valid trait without codec for simple type with Future kind" in {
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Id, String, WithFutureKind]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Id, String, WithFutureKind]"""),
                         "Unable to convert scala.concurrent.Future[Int] to cats.Id[String]. " +
                             "Try to provide poppet.Codec[scala.concurrent.Future[Int],String] " +
                             "or poppet.CodecK[scala.concurrent.Future,cats.Id] with poppet.Codec[Int,String].",
+                        "Unable to convert scala.concurrent.Future[scala.Int] to cats.Id[scala.Predef.String]. " +
+                            "Try to provide poppet.Codec[scala.concurrent.Future[scala.Int],scala.Predef.String] " +
+                            "or poppet.CodecK[scala.concurrent.Future,cats.Id] with poppet.Codec[scala.Int,scala.Predef.String].",
                     )
                 }
                 "for valid trait without codec for simple type with Future kind, but with codecK" in {
@@ -272,23 +269,22 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                         override def apply[A](a: Future[A]): Id[A] = a.value.get.get
                     }
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Id, String, WithFutureKind]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Id, String, WithFutureKind]"""),
                         "Unable to convert scala.concurrent.Future[Int] to cats.Id[String]. " +
                             "Try to provide poppet.Codec[Int,String].",
+                        "Unable to convert scala.concurrent.Future[scala.Int] to cats.Id[scala.Predef.String]. " +
+                            "Try to provide poppet.Codec[scala.Int,scala.Predef.String].",
                     )
                 }
                 "for valid trait without codecK for simple type with Future kind, but with codec" in {
                     implicit val c0: Codec[Int, String] = a => Right(a.toString)
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Id, String, WithFutureKind]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Id, String, WithFutureKind]"""),
                         "Unable to convert scala.concurrent.Future[Int] to cats.Id[String]. " +
                             "Try to provide poppet.Codec[scala.concurrent.Future[Int],String] " +
+                            "or poppet.CodecK[scala.concurrent.Future,cats.Id].",
+                        "Unable to convert scala.concurrent.Future[scala.Int] to cats.Id[scala.Predef.String]. " +
+                            "Try to provide poppet.Codec[scala.concurrent.Future[scala.Int],scala.Predef.String] " +
                             "or poppet.CodecK[scala.concurrent.Future,cats.Id].",
                     )
                 }
@@ -296,12 +292,11 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
             "when has Future data kind" - {
                 "for valid trait without simple codec" in {
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Future, String, Simple]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Future, String, Simple]"""),
                         "Unable to convert Int to scala.concurrent.Future[String]. " +
                             "Try to provide poppet.CodecK[cats.Id,scala.concurrent.Future] with poppet.Codec[Int,String].",
+                        "Unable to convert scala.Int to scala.concurrent.Future[scala.Predef.String]. " +
+                            "Try to provide poppet.CodecK[cats.Id,scala.concurrent.Future] with poppet.Codec[scala.Int,scala.Predef.String].",
                     )
                 }
                 "for valid trait without simple codec, but with codecK" in {
@@ -309,22 +304,20 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                         override def apply[A](a: Id[A]): Future[A] = Future.successful(a)
                     }
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Future, String, Simple]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Future, String, Simple]"""),
                         "Unable to convert Int to scala.concurrent.Future[String]. " +
                             "Try to provide poppet.Codec[Int,String].",
+                        "Unable to convert scala.Int to scala.concurrent.Future[scala.Predef.String]. " +
+                            "Try to provide poppet.Codec[scala.Int,scala.Predef.String].",
                     )
                 }
                 "for valid trait without simple codecK, but with codec" in {
                     implicit val c0: Codec[Int, String] = a => Right(a.toString)
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Future, String, Simple]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Future, String, Simple]"""),
                         "Unable to convert Int to scala.concurrent.Future[String]. " +
+                            "Try to provide poppet.CodecK[cats.Id,scala.concurrent.Future].",
+                        "Unable to convert scala.Int to scala.concurrent.Future[scala.Predef.String]. " +
                             "Try to provide poppet.CodecK[cats.Id,scala.concurrent.Future].",
                     )
                 }
@@ -334,12 +327,12 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                     }
                     implicit val c0: Codec[Int, String] = a => Right(a.toString)
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Future, String, Simple]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Future, String, Simple]"""),
                         "Unable to convert List[Int] to scala.concurrent.Future[String]. " +
                             "Try to provide poppet.Codec[List[Int],String] or poppet.CodecK[List,scala.concurrent.Future].",
+                        "Unable to convert scala.collection.immutable.List[scala.Int] to scala.concurrent.Future[scala.Predef.String]. " +
+                            "Try to provide poppet.Codec[scala.collection.immutable.List[scala.Int],scala.Predef.String] or " +
+                            "poppet.CodecK[scala.collection.immutable.List,scala.concurrent.Future].",
                     )
                 }
                 "for valid trait without codec for simple type with explicit Id kind" in {
@@ -350,12 +343,11 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                     implicit val c1: Codec[List[Int], String] = a => Right(a.toString)
                     implicit val c2: Codec[SimpleDto, String] = a => Right(a.toString)
                     assertCompilationErrorMessage(
-                        assertCompiles(
-                            """ProviderProcessor[Future, String, Simple]
-                              |    .apply(simpleImpl, FailureHandler.throwing)""".stripMargin
-                        ),
+                        assertCompiles("""ProviderProcessor[Future, String, Simple]"""),
                         "Unable to convert cats.Id[List[String]] to scala.concurrent.Future[String]. " +
                             "Try to provide poppet.Codec[List[String],String].",
+                        "Unable to convert cats.Id[scala.collection.immutable.List[scala.Predef.String]] to scala.concurrent.Future[scala.Predef.String]. " +
+                            "Try to provide poppet.Codec[scala.collection.immutable.List[scala.Predef.String],scala.Predef.String].",
                     )
                 }
             }

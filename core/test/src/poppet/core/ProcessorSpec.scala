@@ -7,7 +7,7 @@ import org.scalatest.exceptions.TestFailedException
 import poppet.PoppetSpec
 import scala.concurrent.Future
 
-trait ProcessorSpec extends PoppetSpec {
+object ProcessorSpec {
     case class SimpleDto(value: Int)
     trait Simple {
         def a0: Int
@@ -53,13 +53,25 @@ trait ProcessorSpec extends PoppetSpec {
         def a(b: Int): Int
         def a(b: String): String
     }
+    trait WithAbstractType {
+        type A
+        def a: String
+    }
+}
 
-    def assertCompilationErrorMessage(compilesAssert: => Assertion, message: String): Assertion = {
+trait ProcessorSpec extends PoppetSpec {
+    def assertCompilationErrorMessage(
+        compilesAssert: => Assertion,
+        message: String,
+        alternativeMessages: String*
+    ): Assertion = {
         try {
             compilesAssert
             fail("Compilation was successful")
         } catch { case e: TestFailedException =>
-            assert(e.getMessage().contains(s""""$message""""))
+            val messages = (message :: alternativeMessages.toList).map(m => s""""$m"""")
+            val candidateMessage = messages.find(e.getMessage.contains(_)).getOrElse(messages.head)
+            assert(e.getMessage().contains(candidateMessage))
         }
     }
 }

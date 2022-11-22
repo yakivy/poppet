@@ -1,7 +1,8 @@
-package poppet.example.spring.service
+package poppet.example.spring.provider.service
 
 import cats.Id
 import com.fasterxml.jackson.databind.JsonNode
+import poppet.example.spring.service.UserService
 import poppet.codec.jackson.all._
 import poppet.provider.all._
 

@@ -5,7 +5,10 @@ import scala.reflect.macros.blackbox
 
 object ProcessorMacro {
     def getAbstractMethods(c: blackbox.Context)(tpe: c.Type): List[c.universe.MethodSymbol] = {
-        val methods = tpe.members.toList.filter(m => m.isAbstract).map(_.asMethod).sortBy(_.fullName)
+        tpe.members.view.filter(m => m.isType && m.isAbstract).foreach { t =>
+            c.abort(c.enclosingPosition, s"Abstract types are not supported: $tpe.${t.name}")
+        }
+        val methods = tpe.members.toList.filter(m => m.isAbstract && m.isMethod).map(_.asMethod).sortBy(_.fullName)
         methods.foreach { m =>
             if (m.typeParams.nonEmpty) c.abort(c.enclosingPosition, s"Generic methods are not supported: $tpe.${m.name}")
         }

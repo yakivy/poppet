@@ -1,69 +1,79 @@
 package poppet.provider.core
 
 import cats.Monad
+import cats.Traverse
 import poppet.provider.all._
-import poppet.core.ProcessorMacro
-import scala.quoted._
+import poppet.core.ProcessorMacro.*
+import scala.quoted.*
+import scala.compiletime.*
 
 trait ProviderProcessorObjectBinCompat {
-    implicit inline def apply[F[_], I, S](implicit inline MF: Monad[F]): ProviderProcessor[F, I, S] = ${
-        ProviderProcessorObjectBinCompat.applyImpl[F, I, S]('MF)
-    }
+    implicit inline def apply[F[_], I, S](implicit inline MF: Monad[F]): ProviderProcessor[F, I, S] =
+        ${ ProviderProcessorObjectBinCompat.processorExpr('MF) }
 }
 
 object ProviderProcessorObjectBinCompat {
-    def applyImpl[F[_] : Type, I : Type, S : Type](
+    def processorExpr[F[_]: Type, I: Type, S: Type](
         using q: Quotes)(MF: Expr[Monad[F]]
-    ): Expr[ProviderProcessor[F, I, S]] = {
+    ): Expr[ProviderProcessor[F, I, S]] = '{
+        new ProviderProcessor[F, I, S] {
+            override def apply(service: S, fh: FailureHandler[F]): List[MethodProcessor[F, I]] =
+                ${ ProviderProcessorObjectBinCompat.methodProcessorsImpl[F, I, S]('service, 'fh, MF) }
+        }
+    }
+
+    def methodProcessorsImpl[F[_] : Type, I : Type, S : Type](
+        using q: Quotes)(service: Expr[S], fh: Expr[FailureHandler[F]], MF: Expr[Monad[F]]
+    ): Expr[List[poppet.provider.core.MethodProcessor[F, I]]] = {
         import q.reflect._
-        val serviceName = TypeRepr.of[S].typeSymbol.fullName
-        def methodProcessors(
-            service: Expr[S], fh: Expr[FailureHandler[F]]
-        ): List[Expr[MethodProcessor[F, I]]] = ProcessorMacro.getAbstractMethods[S].map { m =>
-            def decodeArg(arg: ValDef, input: Expr[Map[String, I]]): Expr[F[Any]] = {
-                arg.tpt.tpe.asType match { case '[at] => '{
-                    ${ProcessorMacro.inferImplicit[Codec[I, at]]}
-                        .apply($input(${Literal(StringConstant(arg.name)).asExprOf[String]}))
+        val serviceName = TypeRepr.of[S].show
+        val methodProcessors = getAbstractMethods[S].map { m =>
+            def decodeArg(arg: ValDef): Expr[Map[String, I] => F[Any]] = {
+                resolveTypeMember(TypeRepr.of[S], arg.tpt.tpe).asType match { case '[at] => '{ input =>
+                    summonInline[Codec[I, at]]
+                        .apply(input(${Literal(StringConstant(arg.name)).asExprOf[String]}))
                         .fold($fh.apply, $MF.pure)
                 }}
             }
-            def decodeArgs(input: Expr[Map[String, I]]): Expr[F[List[Any]]] = {
-                m.termParamss.flatMap(_.params).reverse.foldLeft(
-                    '{$MF.pure[List[Any]](List.empty)})(
-                    (acc, item) => '{$MF.flatMap($acc)(accR =>
-                        $MF.map(${decodeArg(item, input).asExprOf[F[Any]]})(ca => ca :: accR)
-                    )}
-                )
+            val decodeArgs: Expr[Map[String, I] => F[List[Any]]] = '{ input =>
+                Traverse[List].sequence(
+                    ${Expr.ofList(m.termParamss.flatMap(_.params).map(decodeArg))}.map(_(input))
+                )(using $MF)
             }
-            val (returnKind, returnType) = ProcessorMacro.separateReturnType(TypeRepr.of[F], m.returnTpt.tpe, true)
-            val (returnKindCodec, returnTypeCodec) = ProcessorMacro.inferReturnCodecs(
+            val (returnKind, returnType) = separateReturnType(
+                TypeRepr.of[F], resolveTypeMember(TypeRepr.of[S], m.returnTpt.tpe), true
+            )
+            val (returnKindCodec, returnTypeCodec) = inferReturnCodecs(
                 returnKind, returnType, m.returnTpt.tpe,
                 TypeRepr.of[F], TypeRepr.of[I], TypeRepr.of[F[I]],
             )
-            returnType.asType match { case '[rt] =>
-                def callService(input: Expr[Map[String, I]]): Expr[F[I]] = '{$MF.flatMap(
-                    ${decodeArgs(input)})(ast => $MF.flatMap(
-                        ${Apply(TypeApply(
-                            Select.unique(returnKindCodec, "apply"),
-                            List(TypeTree.of[rt])),
-                            List(m.termParamss.map(_.params).foldLeft[(Term, Int)](
-                                Select(service.asTerm, m.symbol) -> 0)((acc, item) =>
-                                Apply(acc._1, item.zipWithIndex.map{ t => t._1.tpt.tpe.asType match { case '[at] =>
-                                    '{ast.apply(${Literal(IntConstant(t._2 + acc._2)).asExprOf[Int]}).asInstanceOf[at]}.asTerm
-                                }}) -> (item.size + acc._2)
-                            )._1)
-                        ).asExprOf[F[rt]]})(
-                        ${returnTypeCodec.asExprOf[Codec[rt, I]]}.apply(_).fold($fh.apply, $MF.pure)
+            val callService: Expr[Map[String, I] => F[I]] = returnType.asType match { case '[rt] =>
+                val paramTypes = m.termParamss.map(_.params.map(t => resolveTypeMember(TypeRepr.of[S], t.tpt.tpe)))
+                '{ input =>
+                    $MF.flatMap(
+                        $decodeArgs(input))(ast => $MF.flatMap(
+                            ${Apply(TypeApply(
+                                Select.unique(returnKindCodec, "apply"),
+                                List(TypeTree.of[rt])),
+                                List(paramTypes.foldLeft[(Term, Int)](
+                                    Select(service.asTerm, m.symbol) -> 0)((acc, item) =>
+                                    Apply(acc._1, item.zipWithIndex.map{ t => t._1.asType match { case '[at] =>
+                                        '{ast.apply(${Literal(IntConstant(t._2 + acc._2)).asExprOf[Int]}).asInstanceOf[at]}.asTerm
+                                    }}) -> (item.size + acc._2)
+                                )._1)
+                            ).asExprOf[F[rt]]})(
+                            ${returnTypeCodec.asExprOf[Codec[rt, I]]}.apply(_).fold($fh.apply, $MF.pure)
+                        )
                     )
-                )}
-                '{MethodProcessor[F, I](
-                    ${Literal(StringConstant(serviceName)).asExprOf[String]},
-                    ${Literal(StringConstant(m.name)).asExprOf[String]},
-                    ${Expr.ofList(m.paramss.flatMap(_.params).map(n => Literal(StringConstant(n.name)).asExprOf[String]))},
-                    input => ${callService('input)}
-                )}
+                }
             }
+            '{MethodProcessor[F, I](
+                ${Literal(StringConstant(serviceName)).asExprOf[String]},
+                ${Literal(StringConstant(m.name)).asExprOf[String]},
+                ${Expr.ofList(m.paramss.flatMap(_.params).map(n => Literal(StringConstant(n.name)).asExprOf[String]))},
+                input => $callService(input)
+            )}
         }.toList
-        '{(service, fh) => ${Expr.ofList(methodProcessors('service, 'fh))}}
+        Expr.ofList(methodProcessors)
     }
 }

@@ -1,4 +1,4 @@
-package poppet.example.spring.service
+package poppet.example.spring.consumer.service
 
 import cats.Id
 import com.fasterxml.jackson.databind.JsonNode
@@ -6,6 +6,7 @@ import java.net.URI
 import org.springframework.http.HttpMethod
 import org.springframework.http.RequestEntity
 import org.springframework.web.client.RestTemplate
+import poppet.example.spring.service.UserService
 import poppet.codec.jackson.all._
 import poppet.consumer._
 

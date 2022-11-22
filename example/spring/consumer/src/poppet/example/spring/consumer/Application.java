@@ -1,4 +1,4 @@
-package poppet.example.spring;
+package poppet.example.spring.consumer;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 import poppet.example.spring.service.UserService;
-import poppet.example.spring.service.UserServiceProvider;
+import poppet.example.spring.consumer.service.UserServiceProvider;
 
 @SpringBootApplication
 public class Application {
