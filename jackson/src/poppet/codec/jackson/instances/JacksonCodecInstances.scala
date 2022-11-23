@@ -1,22 +1,15 @@
 package poppet.codec.jackson.instances
 
-import cats.Applicative
-import cats.Functor
-import cats.implicits._
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.ClassTagExtensions
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import poppet._
 
 trait JacksonCodenInstancesLp0 extends JacksonCodecInstancesBinCompat {
     implicit val om: ObjectMapper = {
         val om = new ObjectMapper() with ClassTagExtensions
         om.registerModule(DefaultScalaModule)
-        om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        om.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
         om
     }
 

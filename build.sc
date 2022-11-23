@@ -8,7 +8,7 @@ import mill.scalalib.publish._
 import mill.playlib._
 
 object versions {
-    val publish = "0.3.0"
+    val publish = "0.3.1"
 
     val scala212 = "2.12.17"
     val scala213 = "2.13.10"
@@ -104,7 +104,7 @@ object core extends Module {
         }
     }
 
-    object native extends Cross[NativeModule](versions.cross2: _*)
+    object native extends Cross[NativeModule](versions.cross: _*)
     class NativeModule(val crossScalaVersion: String) extends CommonModule with CommonPublishNativeModule {
         object test extends CommonModuleTests with CommonPublishCrossModuleTests {
             override def moduleDeps = super.moduleDeps ++ Seq(upickle.native())
@@ -143,7 +143,7 @@ object upickle extends Module {
         }
     }
 
-    object native extends Cross[NativeModule](versions.cross2: _*)
+    object native extends Cross[NativeModule](versions.cross: _*)
     class NativeModule(val crossScalaVersion: String) extends CommonModule with CommonPublishNativeModule {
         override def moduleDeps = super.moduleDeps ++ Seq(core.native())
         object test extends CommonModuleTests with CommonPublishCrossModuleTests {
@@ -181,6 +181,14 @@ object circe extends Module {
         override def moduleDeps = super.moduleDeps ++ Seq(core.js())
         object test extends CommonModuleTests with CommonPublishCrossModuleTests {
             override def moduleDeps = super.moduleDeps ++ Seq(core.js().test)
+        }
+    }
+
+    object native extends Cross[NativeModule](versions.cross: _*)
+    class NativeModule(val crossScalaVersion: String) extends CommonModule with CommonPublishNativeModule {
+        override def moduleDeps = super.moduleDeps ++ Seq(core.native())
+        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+            override def moduleDeps = super.moduleDeps ++ Seq(core.native().test)
         }
     }
 }

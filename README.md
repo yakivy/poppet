@@ -8,10 +8,10 @@
 Poppet is a minimal, type-safe RPC Scala library.
 
 Essential differences from [autowire](https://github.com/lihaoyi/autowire):
-- no explicit macro application `.call`, result of a consumer is an instance of original trait
-- no restricted kind `Future`, you can specify any monad (has `cats.Monad` typeclass) as a processor kind, and an arbitrary kind for trait methods
-- no forced codec dependencies `uPickle`, you can choose from predefined codecs or simply implement your own
-- robust failure handling mechanism
+- has no explicit macro application `.call`, result of a consumer is an instance of original trait
+- has no restricted HKT `Future`, you can specify any monad (has `cats.Monad` typeclass) as a processor HKT, and an arbitrary HKT for trait methods
+- has no forced codec dependencies `uPickle`, you can choose from the list of predefined codecs or easily implement your own
+- has robust failure handling mechanism
 - supports Scala 3 (method/class generation with macros is still an experimental feature)
 
 ### Table of contents
@@ -27,13 +27,18 @@ Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 Put cats and poppet dependencies in the build file, let's assume you are using SBT:
 ```scala
 val version = new {
-    cats = "2.6.1"
-    poppet = "0.3.0"
+    val cats = "2.9.0"
+    val circe = "0.14.3"
+    val poppet = "0.3.1"
 }
 
 libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % version.cats,
-    "com.github.yakivy" %% "poppet-circe" % version.poppet, //to use circe
+
+    //to use circe
+    "io.circe" %% "circe-core" % version.circe,
+    "com.github.yakivy" %% "poppet-circe" % version.poppet,
+
     //"com.github.yakivy" %% "poppet-upickle" % version.poppet, //to use upickle
     //"com.github.yakivy" %% "poppet-play-json" % version.poppet, //to use play json
     //"com.github.yakivy" %% "poppet-jackson" % version.poppet, //to use jackson
@@ -96,11 +101,11 @@ userService.findById("1")
 
 ### Customizations
 The library is build on following abstractions:
-- `[F[_]]` - is your service data kind, can be any monad (has `cats.Monad` typeclass);
+- `[F[_]]` - is your service HKT, can be any monad (has `cats.Monad` typeclass);
 - `[I]` - is an intermediate data type that your coding framework works with, can be any serialization format, but it would be easier to choose from existed codec modules as they come with a bunch of predefined codecs;
 - `poppet.consumer.Transport` - used to transfer the data between consumer and provider apps, technically it is just a function from `[I]` to `[F[I]]`, so you can use anything as long as it can receive/pass the chosen data type;
 - `poppet.Codec` - used to convert `[I]` to domain models and vice versa. Poppet comes with a bunch of modules, where you will hopefully find a favourite codec. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/poppet/codec/circe/instances/CirceCodecInstances.scala);
-- `poppet.CodecK` - used to convert method return kind to `[F]` and vice versa. It's needed only if return kind differs from your service kind, compilation errors will hint you what codecs are absent;
+- `poppet.CodecK` - used to convert method return HKT to `[F]` and vice versa. It's needed only if return HKT differs from your service HKT, compilation errors will hint you what codecs are absent;
 - `poppet.FailureHandler[F[_]]` - used to handle internal failures, more info you can find [here](#failure-handling);
 - `poppet.Peek[F[_], I]` - used to decorate a function from `Request[I]` to `F[Response[I]]`. Good fit for logging, more info you can find [here](#logging).
 
@@ -128,14 +133,14 @@ def throwing[F[_]]: FailureHandler[F] = new FailureHandler[F] {
     override def apply[A](f: Failure): F[A] = throw f
 }
 ```
-so if your don't want to deal with JVM exceptions, you can provide your own instance of failure handler. Let's assume you want to pack a failure with `EitherT[Future, String, *]` kind, then failure handler can look like:
+so if your don't want to deal with JVM exceptions, you can provide your own instance of failure handler. Let's assume you want to pack a failure with `EitherT[Future, String, *]` HKT, then failure handler can look like:
 ```scala
 type SR[A] = EitherT[Future, String, A]
 val SRFailureHandler = new FailureHandler[SR] {
     override def apply[A](f: Failure): SR[A] = EitherT.leftT(f.getMessage)
 }
 ```
-For more info you can check [Http4s with Circe](#examples) example project, it is built around `EitherT[IO, String, *]` kind.
+For more info you can check [Http4s with Circe](#examples) example project, it is built around `EitherT[IO, String, *]` HKT.
 
 ### Manual calls
 If your codec has a human-readable format (JSON for example), you can use a provider without consumer (mostly for debug purposes) by generating requests manually. Here is an example of curl call:
@@ -164,6 +169,9 @@ curl --location --request POST '${providerUrl}' \
         - run consumer: `./mill example.spring.consumer.run`
 - put `http://localhost:9002/api/user/1` in the address bar
 ### Changelog
+
+#### 0.3.1:
+- reset `DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES` jackson object mapping property to default value to close [DoS vulnerability](https://github.com/FasterXML/jackson-module-scala/issues/609)
 
 #### 0.3.0:
 - add Scala 3 support
