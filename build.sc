@@ -79,167 +79,158 @@ trait CommonPublishNativeModule extends CommonPublishModule with ScalaNativeModu
     def scalaNativeVersion = versions.scalaNative
     trait CommonPublishCrossModuleTests extends CommonPublishTestModule with Tests
 }
+object poppet extends Module {
+    override def millSourcePath = super.millSourcePath / os.up
+    object core extends Cross[CoreModule](versions.cross: _*)
+    class CoreModule(val crossScalaVersion: String) extends CrossPlatform {
+        trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
+            trait CommonModuleTests extends Tests {
+                override def ivyDeps = super.ivyDeps() ++ Agg(
+                    ivy"com.lihaoyi::upickle::${versions.upickle}",
+                )
+            }
+        }
 
-object core extends Cross[CoreModule](versions.cross: _*)
-class CoreModule(val crossScalaVersion: String) extends CrossPlatform {
-    trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
-        override def artifactName = "poppet-core"
+        object jvm extends CommonModule with CommonPublishJvmModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(upickle().jvm)
+            }
+        }
 
-        trait CommonModuleTests extends Tests {
-            override def ivyDeps = super.ivyDeps() ++ Agg(
+        object js extends CommonModule with CommonPublishJsModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(upickle().js)
+            }
+        }
+
+        object native extends CommonModule with CommonPublishNativeModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(upickle().native)
+            }
+        }
+    }
+
+    object upickle extends Cross[UpickleModule](versions.cross: _*)
+    class UpickleModule(val crossScalaVersion: String) extends CrossPlatform {
+        trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
+            override def compileIvyDeps = super.compileIvyDeps() ++ Agg(
                 ivy"com.lihaoyi::upickle::${versions.upickle}",
             )
+
+            trait CommonModuleTests extends Tests {
+                override def ivyDeps = super.ivyDeps() ++ Agg(
+                    ivy"com.lihaoyi::upickle::${versions.upickle}",
+                )
+            }
+        }
+        override def moduleDeps = super.moduleDeps ++ Seq(core())
+
+        object jvm extends CommonModule with CommonPublishJvmModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(core().jvm.test)
+            }
+        }
+
+        object js extends CommonModule with CommonPublishJsModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(core().js.test)
+            }
+        }
+
+        object native extends CommonModule with CommonPublishNativeModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(core().native.test)
+            }
         }
     }
 
-    object jvm extends CommonModule with CommonPublishJvmModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(upickle().jvm)
-        }
-    }
-
-    object js extends CommonModule with CommonPublishJsModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(upickle().js)
-        }
-    }
-
-    object native extends CommonModule with CommonPublishNativeModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(upickle().native)
-        }
-    }
-}
-
-object upickle extends Cross[UpickleModule](versions.cross: _*)
-class UpickleModule(val crossScalaVersion: String) extends CrossPlatform {
-    trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
-        override def artifactName = "poppet-upickle"
-
-        override def compileIvyDeps = super.compileIvyDeps() ++ Agg(
-            ivy"com.lihaoyi::upickle::${versions.upickle}",
-        )
-
-        trait CommonModuleTests extends Tests {
-            override def ivyDeps = super.ivyDeps() ++ Agg(
-                ivy"com.lihaoyi::upickle::${versions.upickle}",
+    object circe extends Cross[CirceModule](versions.cross: _*)
+    class CirceModule(val crossScalaVersion: String) extends CrossPlatform {
+        trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
+            override def compileIvyDeps = super.compileIvyDeps() ++ Agg(
+                ivy"io.circe::circe-core::${versions.circe}"
             )
+
+            trait CommonModuleTests extends Tests {
+                override def ivyDeps = super.ivyDeps() ++ Agg(
+                    ivy"io.circe::circe-core::${versions.circe}",
+                    ivy"io.circe::circe-generic::${versions.circe}",
+                )
+            }
         }
-    }
-    override def moduleDeps = super.moduleDeps ++ Seq(core())
+        override def moduleDeps = super.moduleDeps ++ Seq(core())
 
-    object jvm extends CommonModule with CommonPublishJvmModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(core().jvm.test)
+        object jvm extends CommonModule with CommonPublishJvmModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(core().jvm.test)
+            }
         }
-    }
 
-    object js extends CommonModule with CommonPublishJsModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(core().js.test)
+        object js extends CommonModule with CommonPublishJsModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(core().js.test)
+            }
         }
-    }
 
-    object native extends CommonModule with CommonPublishNativeModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(core().native.test)
-        }
-    }
-}
-
-object circe extends Cross[CirceModule](versions.cross: _*)
-class CirceModule(val crossScalaVersion: String) extends CrossPlatform {
-    trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
-        override def artifactName = "poppet-circe"
-
-        override def compileIvyDeps = super.compileIvyDeps() ++ Agg(
-            ivy"io.circe::circe-core::${versions.circe}"
-        )
-
-        trait CommonModuleTests extends Tests {
-            override def ivyDeps = super.ivyDeps() ++ Agg(
-                ivy"io.circe::circe-core::${versions.circe}",
-                ivy"io.circe::circe-generic::${versions.circe}",
-            )
-        }
-    }
-    override def moduleDeps = super.moduleDeps ++ Seq(core())
-
-    object jvm extends CommonModule with CommonPublishJvmModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(core().jvm.test)
+        object native extends CommonModule with CommonPublishNativeModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(core().native.test)
+            }
         }
     }
 
-    object js extends CommonModule with CommonPublishJsModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(core().js.test)
-        }
-    }
-
-    object native extends CommonModule with CommonPublishNativeModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(core().native.test)
-        }
-    }
-}
-
-object `play-json` extends Cross[PlayJsonModule](versions.cross2: _*)
-class PlayJsonModule(val crossScalaVersion: String) extends CrossPlatform {
-    trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
-        override def artifactName = "poppet-play-json"
-
-        override def compileIvyDeps = super.compileIvyDeps() ++ Agg(
-            ivy"com.typesafe.play::play-json::${versions.playJson}",
-        )
-
-        trait CommonModuleTests extends Tests {
-            override def ivyDeps = super.ivyDeps() ++ Agg(
+    object `play-json` extends Cross[PlayJsonModule](versions.cross2: _*)
+    class PlayJsonModule(val crossScalaVersion: String) extends CrossPlatform {
+        trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
+            override def compileIvyDeps = super.compileIvyDeps() ++ Agg(
                 ivy"com.typesafe.play::play-json::${versions.playJson}",
             )
+
+            trait CommonModuleTests extends Tests {
+                override def ivyDeps = super.ivyDeps() ++ Agg(
+                    ivy"com.typesafe.play::play-json::${versions.playJson}",
+                )
+            }
+        }
+        override def moduleDeps = super.moduleDeps ++ Seq(core())
+
+        object jvm extends CommonModule with CommonPublishJvmModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(core().jvm.test)
+            }
+        }
+
+        object js extends CommonModule with CommonPublishJsModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(core().js.test)
+            }
         }
     }
-    override def moduleDeps = super.moduleDeps ++ Seq(core())
 
-    object jvm extends CommonModule with CommonPublishJvmModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(core().jvm.test)
-        }
-    }
-
-    object js extends CommonModule with CommonPublishJsModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(core().js.test)
-        }
-    }
-}
-
-object jackson extends Cross[JacksonModule](versions.cross: _*)
-class JacksonModule(val crossScalaVersion: String) extends CrossPlatform {
-    trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
-        override def artifactName = "poppet-jackson"
-
-        override def compileIvyDeps = super.compileIvyDeps() ++ Agg(
-            ivy"com.fasterxml.jackson.core:jackson-databind::${versions.jackson}",
-            ivy"com.fasterxml.jackson.module::jackson-module-scala::${versions.jackson}",
-        )
-
-        trait CommonModuleTests extends Tests {
-            override def ivyDeps = super.ivyDeps() ++ Agg(
+    object jackson extends Cross[JacksonModule](versions.cross: _*)
+    class JacksonModule(val crossScalaVersion: String) extends CrossPlatform {
+        trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {
+            override def compileIvyDeps = super.compileIvyDeps() ++ Agg(
                 ivy"com.fasterxml.jackson.core:jackson-databind::${versions.jackson}",
                 ivy"com.fasterxml.jackson.module::jackson-module-scala::${versions.jackson}",
             )
-        }
-    }
-    override def moduleDeps = super.moduleDeps ++ Seq(core())
 
-    object jvm extends CommonModule with CommonPublishJvmModule {
-        object test extends CommonModuleTests with CommonPublishCrossModuleTests {
-            override def moduleDeps = super.moduleDeps ++ Seq(core().jvm.test)
+            trait CommonModuleTests extends Tests {
+                override def ivyDeps = super.ivyDeps() ++ Agg(
+                    ivy"com.fasterxml.jackson.core:jackson-databind::${versions.jackson}",
+                    ivy"com.fasterxml.jackson.module::jackson-module-scala::${versions.jackson}",
+                )
+            }
+        }
+        override def moduleDeps = super.moduleDeps ++ Seq(core())
+
+        object jvm extends CommonModule with CommonPublishJvmModule {
+            object test extends CommonModuleTests with CommonPublishCrossModuleTests {
+                override def moduleDeps = super.moduleDeps ++ Seq(core().jvm.test)
+            }
         }
     }
 }
-
 object example extends Module {
     object http4s extends Module {
         trait CommonModule extends ScalaModule {
@@ -249,7 +240,7 @@ object example extends Module {
                 ivy"org.typelevel::cats-effect::${versions.catsEffect}",
                 ivy"io.circe::circe-generic::${versions.circe}",
             )
-            override def moduleDeps = super.moduleDeps ++ Seq(circe(versions.scala3).jvm)
+            override def moduleDeps = super.moduleDeps ++ Seq(poppet.circe(versions.scala3).jvm)
         }
         object api extends CommonModule
         object consumer extends CommonModule {
@@ -280,7 +271,7 @@ object example extends Module {
                 ivy"org.typelevel::cats-core::${versions.cats}",
                 ivy"com.typesafe.play::play-json::${versions.playJson}",
             )
-            override def moduleDeps = super.moduleDeps ++ Seq(`play-json`(versions.scala213).jvm)
+            override def moduleDeps = super.moduleDeps ++ Seq(poppet.`play-json`(versions.scala213).jvm)
         }
         object api extends CommonModule
         object consumer extends CommonModule with PlayApiModule {
@@ -304,7 +295,7 @@ object example extends Module {
                 ivy"com.fasterxml.jackson.core:jackson-databind::${versions.jackson}",
                 ivy"com.fasterxml.jackson.module::jackson-module-scala::${versions.jackson}",
             )
-            override def moduleDeps = super.moduleDeps ++ Seq(jackson(versions.scala213).jvm)
+            override def moduleDeps = super.moduleDeps ++ Seq(poppet.jackson(versions.scala213).jvm)
             override def javacOptions = Seq("-source", "1.8", "-target", "1.8")
         }
         object api extends CommonModule
