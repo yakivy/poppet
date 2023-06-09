@@ -10,7 +10,7 @@ import mill.playlib._
 import com.github.lolgab.mill.crossplatform._
 
 object versions {
-    val publish = "0.3.1"
+    val publish = "0.3.2"
 
     val scala212 = "2.12.17"
     val scala213 = "2.13.10"

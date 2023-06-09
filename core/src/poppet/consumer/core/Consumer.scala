@@ -7,7 +7,7 @@ import poppet.core.Request
 import poppet.core.Response
 
 /**
- * @param transport function that transferring data to the provider
+ * @param transport function that transfers data to the provider
  * @param peek function that can decorate given request -> response function without changing the types.
  * It is mostly used to peek on parsed dtos, for example for logging.
  *

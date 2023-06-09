@@ -4,6 +4,7 @@ import cats.Id
 import cats.data.EitherT
 import org.scalatest.Assertion
 import org.scalatest.exceptions.TestFailedException
+import org.scalactic.source.Position
 import poppet.PoppetSpec
 import scala.concurrent.Future
 
@@ -64,6 +65,8 @@ trait ProcessorSpec extends PoppetSpec {
         compilesAssert: => Assertion,
         message: String,
         alternativeMessages: String*
+    )(implicit
+        pos: Position
     ): Assertion = {
         try {
             compilesAssert

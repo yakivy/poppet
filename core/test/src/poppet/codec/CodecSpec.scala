@@ -14,11 +14,14 @@ trait CodecSpec {
         iscodec: Codec[I, Response[I]],
         iqcodec: Codec[I, Request[I]],
         bscodec: Codec[Response[I], I],
+        idcodec: Codec[I, I],
     ): Unit = {
         val request = Request[I]("A", "a", Map("b" -> sc("c").right.get))
         val response = Response[I](sc("c").right.get)
-        assert(iqcodec(bqcodec(request).right.get).right.get == request)
+        val irequest = bqcodec(request).right.get
+        assert(iqcodec(irequest).right.get == request)
         assert(iscodec(bscodec(response).right.get).right.get == response)
+        assert(idcodec(irequest).right.get == irequest)
     }
 
     def assertCustomCodec[I, A](value: A)(

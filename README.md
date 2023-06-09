@@ -168,7 +168,19 @@ curl --location --request POST '${providerUrl}' \
         - run provider: `./mill example.spring.provider.run`
         - run consumer: `./mill example.spring.consumer.run`
 - put `http://localhost:9002/api/user/1` in the address bar
+
+### Roadmap
+- simplify transport and provider response, use Request => Response instead of I (remove Peek?)
+- add action (including argument name) to codec
+- throw an exception on duplicated service processor
+- separate `.service[S]` and `.service[G[_], S]` to simplify codec resolution
+- add possibility to update service name, try to unify service name between Scala 2.x and 3.x
+- don't create ObjectMapper in the lib, use implicit one
+
 ### Changelog
+
+#### 0.3.2:
+- fix codec resolution for id (`I => I`) codecs
 
 #### 0.3.1:
 - reset `DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES` jackson object mapping property to default value to close [DoS vulnerability](https://github.com/FasterXML/jackson-module-scala/issues/609)
