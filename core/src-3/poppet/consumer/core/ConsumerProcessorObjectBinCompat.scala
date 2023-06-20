@@ -64,7 +64,7 @@ object ConsumerProcessorObjectBinCompat {
         import q.reflect._
         val methodReturnTpe = methodSymbol.tree.asInstanceOf[DefDef].returnTpt.tpe
         def codedArgument(a: Tree): Expr[F[I]] = resolveTypeMember(
-            TypeRepr.of[S], a.symbol.termRef.typeSymbol.typeRef
+            TypeRepr.of[S], Ref(a.symbol).tpe.widen
         ).asType match { case '[at] =>
             '{ summonInline[Codec[at,I]].apply(${Ref.term(a.symbol.termRef).asExprOf[at]}).fold($fh.apply, $MF.pure) }
         }

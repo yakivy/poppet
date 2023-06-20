@@ -17,7 +17,8 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
             override def a0: Int = 0
             override def a00(): List[Int] = List(1)
             override def a1(b: Boolean): SimpleDto = SimpleDto(2)
-            override def a2(b0: Boolean, b1: Boolean): Id[List[String]] = List((b0.toInt + b1.toInt).toString)
+            override def a2(b0: Boolean, b1: Option[Boolean]): Id[List[String]] =
+                List((b0.toInt + b1.getOrElse(false).toInt).toString)
         }
         val withComplexReturnTypesImpl = new WithComplexReturnTypes {
             override def a0(b: Boolean): WithComplexReturnTypes.ReturnType[Int] =
@@ -31,7 +32,8 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
             implicit val c1: Codec[List[Int], String] = a => Right(a.toString)
             implicit val c2: Codec[SimpleDto, String] = a => Right(a.toString)
             implicit val c3: Codec[List[String], String] = a => Right(a.toString)
-            implicit val cp: Codec[String, Boolean] = a => Right(a.toBoolean)
+            implicit val cp0: Codec[String, Boolean] = a => Right(a.toBoolean)
+            implicit val cp1: Codec[String, Option[Boolean]] = a => Right(Option(a.toBoolean))
 
             "when has id data kind" - {
                 "for methods with different arguments number" in {

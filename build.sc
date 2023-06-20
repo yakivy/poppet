@@ -10,7 +10,7 @@ import mill.playlib._
 import com.github.lolgab.mill.crossplatform._
 
 object versions {
-    val publish = "0.3.2"
+    val publish = "0.3.3"
 
     val scala212 = "2.12.17"
     val scala213 = "2.13.10"
@@ -79,8 +79,10 @@ trait CommonPublishNativeModule extends CommonPublishModule with ScalaNativeModu
     def scalaNativeVersion = versions.scalaNative
     trait CommonPublishCrossModuleTests extends CommonPublishTestModule with Tests
 }
+
 object poppet extends Module {
     override def millSourcePath = super.millSourcePath / os.up
+
     object core extends Cross[CoreModule](versions.cross: _*)
     class CoreModule(val crossScalaVersion: String) extends CrossPlatform {
         trait CommonModule extends CrossPlatformCrossScalaModule with CommonPublishModule {

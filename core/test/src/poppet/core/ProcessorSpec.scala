@@ -14,7 +14,7 @@ object ProcessorSpec {
         def a0: Int
         def a00(): List[Int]
         def a1(b: Boolean): SimpleDto
-        def a2(b0: Boolean, b1: Boolean): Id[List[String]]
+        def a2(b0: Boolean, b1: Option[Boolean]): Id[List[String]]
     }
     trait WithFutureKind {
         def a0: Future[Int]

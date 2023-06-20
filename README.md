@@ -179,6 +179,9 @@ curl --location --request POST '${providerUrl}' \
 
 ### Changelog
 
+#### 0.3.3:
+- fix several compilation errors for Scala 3
+
 #### 0.3.2:
 - fix codec resolution for id (`I => I`) codecs
 

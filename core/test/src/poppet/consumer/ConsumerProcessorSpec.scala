@@ -17,7 +17,8 @@ class ConsumerProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
             implicit val c1: Codec[String, List[Int]] = a => Right(List(a.toInt))
             implicit val c2: Codec[String, SimpleDto] = a => Right(SimpleDto(a.toInt))
             implicit val c3: Codec[String, List[String]] = a => Right(List(a))
-            implicit val cp: Codec[Boolean, String] = a => Right(a.toString)
+            implicit val cp0: Codec[Boolean, String] = a => Right(a.toString)
+            implicit val cp1: Codec[Option[Boolean], String] = a => Right(a.getOrElse(false).toString)
             var request: Request[String] = null
 
             "when has id data kind" - {
@@ -37,7 +38,7 @@ class ConsumerProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                     assert(a.a1(true) == SimpleDto(0) && request == Request(
                         "poppet.core.ProcessorSpec.Simple", "a1", Map("b" -> "true")
                     ))
-                    assert(a.a2(true, false) == List("0") && request == Request(
+                    assert(a.a2(true, None) == List("0") && request == Request(
                         "poppet.core.ProcessorSpec.Simple", "a2", Map("b0" -> "true", "b1" -> "false")
                     ))
                 }
@@ -141,7 +142,7 @@ class ConsumerProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                 assert(a.a1(true) == SimpleDto(0) && request == Request(
                     "poppet.core.ProcessorSpec.Simple", "a1", Map("b" -> "true")
                 ))
-                assert(a.a2(true, false) == List("0") && request == Request(
+                assert(a.a2(true, Option(false)) == List("0") && request == Request(
                     "poppet.core.ProcessorSpec.Simple", "a2", Map("b0" -> "true", "b1" -> "false")
                 ))
             }
