@@ -158,7 +158,7 @@ curl --location --request POST '${providerUrl}' \
 ```
 
 ### Limitations
-You can generate consumer/provider almost from any trait, it can have non-abstract members, methods with default arguments, methods with multiple argument lists, etc... but there are several limitations:
+You can generate consumer/provider almost from any Scala trait, it can have non-abstract members, methods with default arguments, methods with multiple argument lists, etc... but there are several limitations:
 - you cannot overload methods with the same argument names, because for the sake of simplicity argument names are being used as a part of the request, for more info check [manual calls](#manual-calls) section:
 ```scala
 //compiles
@@ -185,6 +185,7 @@ trait A {
     def apply(t: T): Boolean
 }
 ```
+- trait should not have arguments
 
 ### API versioning
 The goal of the library is to closely resemble typical Scala traits, so same binary compatibility approaches can also be applied for API versioning, for example:
@@ -231,6 +232,7 @@ Provider[..., ...]()
 - separate `.service[S]` and `.service[G[_], S]` to simplify codec resolution
 - add possibility to update service name, try to unify service name between Scala 2.x and 3.x
 - don't create ObjectMapper in the lib, use implicit one
+- check that passed class is a trait and doesn't have arguments to prevent obscure error from compiler
 
 ### Changelog
 
