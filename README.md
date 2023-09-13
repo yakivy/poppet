@@ -158,7 +158,7 @@ curl --location --request POST '${providerUrl}' \
 ```
 
 ### Limitations
-You can generate consumer/provider almost from any Scala trait, it can have non-abstract members, methods with default arguments, methods with multiple argument lists, etc... but there are several limitations:
+You can generate consumer/provider almost from any Scala trait (or Java interface 😲). It can have non-abstract members, methods with default arguments, methods with multiple argument lists, etc... But there are several limitations:
 - you cannot overload methods with the same argument names, because for the sake of simplicity argument names are being used as a part of the request, for more info check [manual calls](#manual-calls) section:
 ```scala
 //compiles
