@@ -20,6 +20,8 @@ Essential differences from [autowire](https://github.com/lihaoyi/autowire):
     1. [Logging](#logging)
     1. [Failure handling](#failure-handling)
 1. [Manual calls](#manual-calls)
+1. [Limitations](#limitations)
+1. [API versioning](#api-versioning)
 1. [Examples](#examples)
 1. [Changelog](#changelog)
 
@@ -153,6 +155,49 @@ curl --location --request POST '${providerUrl}' \
         "id": "1" #argument name: encoded value
     }
 }'
+```
+
+### Limitations
+You can generate consumer/provider almost from any trait, it can have non-abstract members, methods with default arguments or multiple argument lists, etc... but there are several limitations:
+- you cannot overload methods with the same argument names, because for the sake of simplicity argument names are being used as a part of the request, for more info check [manual calls](#manual-calls) section:
+```scala
+//compiles
+def apply(a: String): Boolean = ???
+def apply(b: Int): Boolean = ???
+
+// doesn't compile
+def apply(a: String): Boolean = ???
+def apply(a: Int): Boolean = ???
+```
+- trait/method type parameters should be fully qualified, because codecs are resolved at consumer/provider generation rather than at the method call:
+```scala
+//compiles
+trait A[T] {
+    def apply(t: T): Boolean
+}
+
+//doesn't compile
+trait A {
+    def apply[T](t: T): Boolean
+}
+trait A {
+    type T
+    def apply(t: T): Boolean
+}
+```
+
+### API versioning
+Library is intended to be as close as possible to usual Scala traits so same approaches to versioning can be applied, for example:
+- when you want to change method signature, add new method and deprecate old one, (important note: argument name is a part of signature in poppet, for more info check [limitations](#limitations) section):
+```scala
+@deprecared def apply(a: String): Boolean = ???
+def apply(b: Int): Boolean = ???
+```
+- when you want to remove method, deprecate it and remove after all consumers update to the new version
+- when you want to change service name, create new service (you can extend it from the old one) and deprecate old one:
+```scala
+@deprecated trait A
+trait B extends A
 ```
 
 ### Examples
