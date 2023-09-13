@@ -158,7 +158,7 @@ curl --location --request POST '${providerUrl}' \
 ```
 
 ### Limitations
-You can generate consumer/provider almost from any trait, it can have non-abstract members, methods with default arguments or multiple argument lists, etc... but there are several limitations:
+You can generate consumer/provider almost from any trait, it can have non-abstract members, methods with default arguments, methods with multiple argument lists, etc... but there are several limitations:
 - you cannot overload methods with the same argument names, because for the sake of simplicity argument names are being used as a part of the request, for more info check [manual calls](#manual-calls) section:
 ```scala
 //compiles
@@ -194,10 +194,14 @@ Library is intended to be as close as possible to usual Scala traits so same app
 def apply(b: Int): Boolean = ???
 ```
 - when you want to remove method, deprecate it and remove after all consumers update to the new version
-- when you want to change service name, create new service (you can extend it from the old one) and deprecate old one:
+- when you want to change service name, provide new service (you can extend it from the old one) and deprecate old one:
 ```scala
 @deprecated trait A
 trait B extends A
+
+Provider[..., ...]()
+    .service[A](bImpl)
+    .service[B](bImpl)
 ```
 
 ### Examples
