@@ -187,13 +187,19 @@ trait A {
 ```
 
 ### API versioning
-Library is intended to be as close as possible to usual Scala traits so same approaches to versioning can be applied, for example:
+The goal of the library is to closely resemble typical Scala traits, so same binary compatibility approaches can also be applied for API versioning, for example:
 - when you want to change method signature, add new method and deprecate old one, (important note: argument name is a part of signature in poppet, for more info check [limitations](#limitations) section):
 ```scala
 @deprecared def apply(a: String): Boolean = ???
 def apply(b: Int): Boolean = ???
 ```
-- when you want to remove method, deprecate it and remove after all consumers update to the new version
+- if you are tolerant to binary incompatible changes, you can modify argument/return types without creating new method, but ensure that codecs are compatible:
+```scala
+def apply(a: String): Boolean = ???
+//if Email is serialized as a String, method can be updated to
+def apply(a: Email): Boolean = ???
+```
+- when you want to remove method, deprecate it and remove after all consumers are updated to the new version
 - when you want to change service name, provide new service (you can extend it from the old one) and deprecate old one:
 ```scala
 @deprecated trait A
