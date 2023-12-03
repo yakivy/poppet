@@ -32,6 +32,12 @@ object ProcessorMacro {
         }
     }
 
+    def unwrapVararg(c: blackbox.Context)(t: c.Type): c.Type = {
+        import c.universe._
+        if (t.typeSymbol == definitions.RepeatedParamClass) appliedType(typeOf[Seq[_]], t.typeArgs)
+        else t
+    }
+
     def separateReturnType(
         c: blackbox.Context)(fType: c.Type, returnType: c.Type, fromReturn: Boolean
     ): (c.Type, c.Type) = {

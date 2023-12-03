@@ -29,7 +29,7 @@ object ProviderProcessorObjectBinCompat {
         val serviceName = TypeRepr.of[S].show
         val methodProcessors = getAbstractMethods[S].map { m =>
             def decodeArg(arg: ValDef): Expr[Map[String, I] => F[Any]] = {
-                resolveTypeMember(TypeRepr.of[S], arg.tpt.tpe).asType match { case '[at] => '{ input =>
+                unwrapVararg(resolveTypeMember(TypeRepr.of[S], arg.tpt.tpe)).asType match { case '[at] => '{ input =>
                     summonInline[Codec[I, at]]
                         .apply(input(${Literal(StringConstant(arg.name)).asExprOf[String]}))
                         .fold($fh.apply, $MF.pure)
@@ -48,7 +48,9 @@ object ProviderProcessorObjectBinCompat {
                 TypeRepr.of[F], TypeRepr.of[I], TypeRepr.of[F[I]],
             )
             val callService: Expr[Map[String, I] => F[I]] = returnType.asType match { case '[rt] =>
-                val paramTypes = m.termParamss.map(_.params.map(t => resolveTypeMember(TypeRepr.of[S], t.tpt.tpe)))
+                val paramTypes = m.termParamss.map(_.params.map(arg =>
+                    arg -> resolveTypeMember(TypeRepr.of[S], arg.tpt.tpe)
+                ))
                 '{ input =>
                     $MF.flatMap(
                         $decodeArgs(input))(ast => $MF.flatMap(
@@ -56,10 +58,19 @@ object ProviderProcessorObjectBinCompat {
                                 Select.unique(returnKindCodec, "apply"),
                                 List(TypeTree.of[rt])),
                                 List(paramTypes.foldLeft[(Term, Int)](
-                                    Select(service.asTerm, m.symbol) -> 0)((acc, item) =>
-                                    Apply(acc._1, item.zipWithIndex.map{ t => t._1.asType match { case '[at] =>
-                                        '{ast.apply(${Literal(IntConstant(t._2 + acc._2)).asExprOf[Int]}).asInstanceOf[at]}.asTerm
-                                    }}) -> (item.size + acc._2)
+                                    Select(service.asTerm, m.symbol) -> 0)((acc, item) => (
+                                        Apply(acc._1, item.zipWithIndex.map{ case ((arg, t), i) =>
+                                            t.asType match { case '[at] =>
+                                                val term = '{ast.apply(${Literal(IntConstant(i + acc._2)).asExprOf[Int]}).asInstanceOf[at]}.asTerm
+                                                arg.tpt.tpe match {
+                                                    case AnnotatedType(tpeP, t) if t.tpe.typeSymbol == defn.RepeatedAnnot =>
+                                                        Typed(term, Inferred(defn.RepeatedParamClass.typeRef.appliedTo(tpeP.typeArgs)))
+                                                    case _ => term
+                                                }
+                                            }
+                                        }),
+                                        (item.size + acc._2)
+                                    )
                                 )._1)
                             ).asExprOf[F[rt]]})(
                             ${returnTypeCodec.asExprOf[Codec[rt, I]]}.apply(_).fold($fh.apply, $MF.pure)

@@ -10,20 +10,20 @@ import mill.playlib._
 import com.github.lolgab.mill.crossplatform._
 
 object versions {
-    val publish = "0.3.3"
+    val publish = "0.3.4"
 
-    val scala212 = "2.12.17"
-    val scala213 = "2.13.10"
-    val scala3 = "3.2.1"
-    val scalaJs = "1.11.0"
-    val scalaNative = "0.4.8"
+    val scala212 = "2.12.18"
+    val scala213 = "2.13.12"
+    val scala3 = "3.3.0"
+    val scalaJs = "1.13.2"
+    val scalaNative = "0.4.16"
     val scalatest = "3.2.14"
-    val cats = "2.9.0"
+    val cats = "2.10.0"
 
     val upickle = "2.0.0"
-    val circe = "0.14.3"
-    val playJson = "2.9.3"
-    val jackson = "2.13.4"
+    val circe = "0.14.6"
+    val playJson = "2.9.4"
+    val jackson = "2.13.5"
 
     val catsEffect = "3.4.1"
     val http4s = "0.23.12"

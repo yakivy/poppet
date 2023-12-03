@@ -5,12 +5,12 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 trait ProviderProcessorObjectBinCompat {
-    implicit def apply[F[_], I, S]: ProviderProcessor[F, I, S] =
-        macro ProviderProcessorObjectBinCompat.applyImpl[F, I, S]
+    implicit def generate[F[_], I, S]: ProviderProcessor[F, I, S] =
+        macro ProviderProcessorObjectBinCompat.generateImpl[F, I, S]
 }
 
 object ProviderProcessorObjectBinCompat {
-    def applyImpl[F[_], I, S](
+    def generateImpl[F[_], I, S](
         c: blackbox.Context)(
         implicit FT: c.WeakTypeTag[F[_]], IT: c.WeakTypeTag[I], ST: c.WeakTypeTag[S]
     ): c.Expr[ProviderProcessor[F, I, S]] = {
@@ -21,7 +21,7 @@ object ProviderProcessorObjectBinCompat {
             val argumentNames = m.paramLists.flatten.map(_.name.toString)
             val (returnKind, returnType) = ProcessorMacro.separateReturnType(c)(FT.tpe, mInS.finalResultType, true)
             val codedArgument: c.universe.Symbol => Tree = a => q"""_root_.scala.Predef.implicitly[
-                _root_.poppet.core.Codec[$IT,${a.typeSignature}]
+                _root_.poppet.core.Codec[$IT,${ProcessorMacro.unwrapVararg(c)(a.typeSignature)}]
             ].apply(as(${a.name.toString})).fold($$fh.apply, $fmonad.pure)"""
             val withCodedArguments: Tree => Tree = tree => mInS.paramLists.flatten match {
                 case Nil => tree
@@ -38,17 +38,26 @@ object ProviderProcessorObjectBinCompat {
                 returnKind, returnType, mInS.finalResultType,
                 FT.tpe, IT.tpe, appliedType(FT.tpe, IT.tpe),
             )
-            val groupedArguments = m.paramLists.map(pl => pl.map(p => Ident(p.name)))
+            val groupedArguments = m.paramLists.map(pl => pl.map(p => p.typeSignature.typeSymbol -> Ident(p.name)))
             q"""new _root_.poppet.provider.core.MethodProcessor[$FT, $IT](
                 ${ST.tpe.typeSymbol.fullName},
                 ${m.name.toString},
                 _root_.scala.List(..$argumentNames),
                 as => ${withCodedArguments(q"""
-                    $fmonad.flatMap($returnKindCodec.apply(${groupedArguments.foldLeft[Tree](
-                        q"$$service.${m.name.toTermName}")((acc, pl) => Apply(acc, pl)
-                    )}))(_root_.scala.Predef.implicitly[
-                        _root_.poppet.core.Codec[$returnType,${IT.tpe}]
-                    ].apply(_).fold($$fh.apply, $fmonad.pure))
+                    $fmonad.flatMap(
+                        $returnKindCodec.apply(${
+                            groupedArguments.foldLeft[Tree](q"$$service.${m.name.toTermName}") { (acc, pl) =>
+                                pl.lastOption match {
+                                    case Some((s, i)) if s == definitions.RepeatedParamClass =>
+                                        q"$acc(..${pl.init.map(_._2)}, $i: _*)"
+                                    case _ => q"$acc(..${pl.map(_._2)})"
+                                }
+                            }
+                        })
+                    )(
+                        _root_.scala.Predef.implicitly[_root_.poppet.core.Codec[$returnType,${IT.tpe}]]
+                            .apply(_).fold($$fh.apply, $fmonad.pure)
+                    )
                 """)}
             )"""
         }

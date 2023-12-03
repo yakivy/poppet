@@ -1,7 +1,6 @@
 ## Poppet
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.yakivy/poppet-core_2.13.svg)](https://mvnrepository.com/search?q=poppet)
 [![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/https/oss.sonatype.org/com.github.yakivy/poppet-core_2.13.svg)](https://oss.sonatype.org/content/repositories/snapshots/com/github/yakivy/poppet-core_2.13/)
-[![Build Status](https://app.travis-ci.com/yakivy/poppet.svg?branch=master)](https://app.travis-ci.com/github/yakivy/poppet)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 <a href="https://typelevel.org/cats/"><img src="https://typelevel.org/cats/img/cats-badge.svg" height="40px" align="right" alt="Cats friendly" /></a>
 
@@ -9,10 +8,10 @@ Poppet is a minimal, type-safe RPC Scala library.
 
 Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 - has no explicit macro application `.call`, result of a consumer is an instance of original trait
-- has no restricted HKT `Future`, you can specify any monad (has `cats.Monad` typeclass) as a processor HKT, and an arbitrary HKT for trait methods
-- has no forced codec dependencies `uPickle`, you can choose from the list of predefined codecs or easily implement your own
+- has no restricted HKT `Future`, you can specify any monad (has `cats.Monad` typeclass) as HKT for the provider/consumer
+- has no forced codec dependencies `uPickle`, you can choose from the list of predefined codecs or easily implement your own codec
 - has robust failure handling mechanism
-- supports Scala 3 (method/class generation with macros is still an experimental feature)
+- supports Scala 3 (however method/class generation with macros is still an experimental feature)
 
 ### Table of contents
 1. [Quick start](#quick-start)
@@ -29,9 +28,9 @@ Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 Put cats and poppet dependencies in the build file, let's assume you are using SBT:
 ```scala
 val version = new {
-    val cats = "2.9.0"
-    val circe = "0.14.3"
-    val poppet = "0.3.1"
+    val cats = "2.10.0"
+    val circe = "0.14.6"
+    val poppet = "0.3.4"
 }
 
 libraryDependencies ++= Seq(
@@ -158,7 +157,7 @@ curl --location --request POST '${providerUrl}' \
 ```
 
 ### Limitations
-You can generate consumer/provider almost from any Scala trait (or Java interface 😲). It can have non-abstract members, methods with default arguments, methods with multiple argument lists, etc... But there are several limitations:
+You can generate consumer/provider almost from any Scala trait (or Java interface 😲). It can have non-abstract members, methods with default arguments, methods with multiple argument lists, varargs, etc... But there are several limitations:
 - you cannot overload methods with the same argument names, because for the sake of simplicity argument names are being used as a part of the request, for more info check [manual calls](#manual-calls) section:
 ```scala
 //compiles
@@ -230,11 +229,14 @@ Provider[..., ...]()
 - add action (including argument name) to codec
 - throw an exception on duplicated service processor
 - separate `.service[S]` and `.service[G[_], S]` to simplify codec resolution
-- add possibility to update service name, try to unify service name between Scala 2.x and 3.x
 - don't create ObjectMapper in the lib, use implicit one
 - check that passed class is a trait and doesn't have arguments to prevent obscure error from compiler
+- check that all abstract methods are public
 
 ### Changelog
+
+#### 0.3.4:
+- fix compilation errors for methods with varargs
 
 #### 0.3.3:
 - fix several compilation errors for Scala 3

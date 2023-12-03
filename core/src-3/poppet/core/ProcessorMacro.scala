@@ -25,6 +25,17 @@ object ProcessorMacro {
         methods
     }
 
+    def unwrapVararg(using q: Quotes)(tpe: q.reflect.TypeRepr) = {
+        import q.reflect._
+        tpe match {
+            case AnnotatedType(tpeP, t) if t.tpe.typeSymbol == defn.RepeatedAnnot =>
+                TypeRepr.of[Seq].appliedTo(tpeP.typeArgs)
+            case tpe if tpe.typeSymbol == defn.RepeatedParamClass =>
+                TypeRepr.of[Seq].appliedTo(tpe.typeArgs)
+            case _ => tpe
+        }
+    }
+
     def resolveTypeMember(
         using q: Quotes)(
         owner: q.reflect.TypeRepr,

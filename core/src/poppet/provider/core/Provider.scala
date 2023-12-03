@@ -25,7 +25,7 @@ class Provider[F[_] : Monad, I](
     private val indexedProcessors: Map[String, Map[String, Map[String, Map[String, I] => F[I]]]] =
         processors.groupBy(_.service).mapValues(
             _.groupBy(_.name).mapValues(
-                _.map(m => m.arguments.sorted.mkString(",") -> m.f).toMap
+                _.map(m => m.arguments.toList.sorted.mkString(",") -> m.f).toMap
             ).toMap
         ).toMap
 

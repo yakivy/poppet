@@ -5,12 +5,12 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 trait ConsumerProcessorObjectBinCompat {
-    implicit def apply[F[_], I, S]: ConsumerProcessor[F, I, S] =
-        macro ConsumerProcessorObjectBinCompat.applyImpl[F, I, S]
+    implicit def generate[F[_], I, S]: ConsumerProcessor[F, I, S] =
+        macro ConsumerProcessorObjectBinCompat.generateImpl[F, I, S]
 }
 
 object ConsumerProcessorObjectBinCompat {
-    def applyImpl[F[_], I, S](
+    def generateImpl[F[_], I, S](
         c: blackbox.Context)(
         implicit FT: c.WeakTypeTag[F[_]], IT: c.WeakTypeTag[I], ST: c.WeakTypeTag[S]
     ): c.Expr[ConsumerProcessor[F, I, S]] = {
@@ -23,7 +23,7 @@ object ConsumerProcessorObjectBinCompat {
             val arguments = mInS.paramLists.map(ps => ps.map(p => q"${Ident(p.name)}: ${p.typeSignature}"))
             val (returnKind, returnType) = ProcessorMacro.separateReturnType(c)(FT.tpe, mInS.finalResultType, false)
             val codedArgument: c.universe.Symbol => Tree = a => q"""_root_.scala.Predef.implicitly[
-                _root_.poppet.core.Codec[${a.typeSignature},${IT.tpe}]
+                _root_.poppet.core.Codec[${ProcessorMacro.unwrapVararg(c)(a.typeSignature)},${IT.tpe}]
             ].apply(${Ident(a.name)}).fold($$fh.apply, $fmonad.pure)"""
             val withCodedArguments: Tree => Tree = tree => mInS.paramLists.flatten match {
                 case Nil => tree

@@ -7,6 +7,7 @@ import org.scalatest.exceptions.TestFailedException
 import org.scalactic.source.Position
 import poppet.PoppetSpec
 import scala.concurrent.Future
+import scala.util.matching.Regex
 
 object ProcessorSpec {
     case class SimpleDto(value: Int)
@@ -34,11 +35,14 @@ object ProcessorSpec {
         def a0(b0: A): Int
         def a1: B
     }
+    trait WithVarargs {
+        def a0(b: Boolean*): Int
+    }
     trait WithParentWithParameters extends WithParameters[Boolean, Int]
     trait WithComplexReturnTypes {
         def a0(b: Boolean): WithComplexReturnTypes.ReturnType[Int]
         def a1(b0: Boolean, b1: Boolean): WithComplexReturnTypes.ReturnType[Int]
-        //def b: Either[String, Int]
+        // def b: Either[String, Int]
     }
     object WithComplexReturnTypes {
         type ReturnType[A] = EitherT[Future, String, A]
@@ -71,10 +75,27 @@ trait ProcessorSpec extends PoppetSpec {
         try {
             compilesAssert
             fail("Compilation was successful")
-        } catch { case e: TestFailedException =>
-            val messages = (message :: alternativeMessages.toList).map(m => s""""$m"""")
-            val candidateMessage = messages.find(e.getMessage.contains(_)).getOrElse(messages.head)
-            assert(e.getMessage().contains(candidateMessage))
+        } catch {
+            case e: TestFailedException =>
+                val messages = (message :: alternativeMessages.toList).map(m => s""""$m"""")
+                val candidateMessage = messages.find(e.getMessage.contains(_)).getOrElse(messages.head)
+                assert(e.getMessage().contains(candidateMessage))
+        }
+    }
+
+    def assertCompilationErrorMessagePattern(
+        compilesAssert: => Assertion,
+        pattern: Regex
+    )(implicit
+        pos: Position
+    ): Assertion = {
+        try {
+            compilesAssert
+            fail("Compilation was successful")
+        } catch {
+            case e: TestFailedException =>
+                val finalPattern = s"""[^"]*"${pattern.regex}"[^"]*"""
+                assert(e.getMessage().matches(finalPattern), s"; `${e.getMessage()}` doesn't match `$finalPattern`")
         }
     }
 }

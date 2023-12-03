@@ -10,4 +10,6 @@ class MethodProcessor[F[_], I](
     val service: String, val name: String, val arguments: List[String], val f: Map[String, I] => F[I]
 )
 
-object ProviderProcessor extends ProviderProcessorObjectBinCompat
+object ProviderProcessor extends ProviderProcessorObjectBinCompat {
+    def apply[F[_], I, S](implicit instance: ProviderProcessor[F, I, S]): ProviderProcessor[F, I, S] = instance
+}
