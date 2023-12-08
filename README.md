@@ -30,7 +30,7 @@ Put cats and poppet dependencies in the build file, let's assume you are using S
 val version = new {
     val cats = "2.10.0"
     val circe = "0.14.6"
-    val poppet = "0.3.4"
+    val poppet = "0.3.5"
 }
 
 libraryDependencies ++= Seq(
@@ -235,28 +235,16 @@ Provider[..., ...]()
 
 ### Changelog
 
-#### 0.3.4:
+#### 0.3.x:
 - fix compilation errors for methods with varargs
-
-#### 0.3.3:
 - fix several compilation errors for Scala 3
-
-#### 0.3.2:
 - fix codec resolution for id (`I => I`) codecs
-
-#### 0.3.1:
 - reset `DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES` jackson object mapping property to default value to close [DoS vulnerability](https://github.com/FasterXML/jackson-module-scala/issues/609)
-
-#### 0.3.0:
 - add Scala 3 support
 
-#### 0.2.2:
+#### 0.2.x:
 - fix compilation error message for ambiguous implicits
-
-#### 0.2.1:
 - fix processor compilation for complex types
-
-#### 0.2.0:
 - migrate to mill build tool
 - add Scala JS and Scala Native support
 - add more details to `Can't find processor` exception

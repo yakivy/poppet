@@ -38,7 +38,7 @@ class ProviderProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
 
             "when has id data kind" - {
                 "for methods with different arguments number" in {
-                    val p = ProviderProcessor[Id, String, Simple].apply(simpleImpl, FailureHandler.throwing)
+                    val p = ProviderProcessor.generate[Id, String, Simple].apply(simpleImpl, FailureHandler.throwing)
 
                     assert(p(0).service == "poppet.core.ProcessorSpec.Simple"
                         && p(0).name == "a0" && p(0).arguments == List.empty

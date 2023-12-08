@@ -28,7 +28,7 @@ class ConsumerProcessorSpec extends AsyncFreeSpec with ProcessorSpec {
                     Response("0")
                 }
                 "for methods with different arguments number" in {
-                    val a = ConsumerProcessor[Id, String, Simple].apply(client, FailureHandler.throwing)
+                    val a = ConsumerProcessor.generate[Id, String, Simple].apply(client, FailureHandler.throwing)
 
                     assert(a.a0 == 0 && request == Request[String](
                         "poppet.core.ProcessorSpec.Simple",

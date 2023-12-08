@@ -12,7 +12,7 @@ import scala.quoted.*
 import scala.compiletime.*
 
 trait ConsumerProcessorObjectBinCompat {
-    implicit inline def apply[F[_], I, S](implicit inline MF: Monad[F]): ConsumerProcessor[F, I, S] =
+    implicit inline def generate[F[_], I, S](implicit inline MF: Monad[F]): ConsumerProcessor[F, I, S] =
         ${ ConsumerProcessorObjectBinCompat.processorExpr('MF) }
 }
 
