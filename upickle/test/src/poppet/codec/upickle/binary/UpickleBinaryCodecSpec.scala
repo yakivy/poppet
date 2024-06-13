@@ -9,9 +9,6 @@ import upickle.default._
 
 class UpickleBinaryCodecSpec extends AnyFreeSpec with CodecSpec {
     "Upickle binary codec should parse" - {
-        "request and response data structures" in {
-            assertExchangeCodec[Msg]
-        }
         "custom data structures" in {
             implicit val RW: ReadWriter[A] = macroRW[A]
             assertCustomCodec[Msg, Unit](())

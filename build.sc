@@ -8,9 +8,9 @@ import mill.scalalib.publish._
 import mill.playlib._
 
 object versions {
-    val publish = "0.3.5"
+    val publish = "0.4.0"
 
-    val scala212 = "2.12.18"
+    val scala212 = "2.12.19"
     val scala213 = "2.13.12"
     val scala3 = "3.3.0"
     val scalaJs = "1.13.2"
@@ -23,8 +23,11 @@ object versions {
     val playJson = "2.9.4"
     val jackson = "2.13.5"
 
-    val catsEffect = "3.4.1"
-    val http4s = "0.23.12"
+    val catsEffect = "3.5.4"
+    val fs2 = "3.10.0"
+    val http4s = "0.23.16"
+    val tapir = "1.10.0"
+    val sttp = "3.9.4"
     val play = "2.8.18"
     val logback = "1.2.11"
     val springBoot = "2.7.5"
@@ -252,7 +255,7 @@ object jackson extends Module {
 }
 
 object example extends Module {
-    object http4s extends Module {
+    object `http4s-circe` extends Module {
         trait CommonModule extends ScalaModule {
             override def scalaVersion = versions.scala3
             override def ivyDeps = super.ivyDeps() ++ Agg(
@@ -307,7 +310,7 @@ object example extends Module {
         }
     }
 
-    object spring extends Module {
+    object `spring-jackson` extends Module {
         trait CommonModule extends ScalaModule {
             override def scalaVersion = versions.scala213
             override def ivyDeps = super.ivyDeps() ++ Agg(
@@ -330,6 +333,42 @@ object example extends Module {
             override def finalMainClass = "poppet.example.spring.provider.Application"
             override def ivyDeps = super.ivyDeps() ++ Agg(
                 ivy"org.springframework.boot:spring-boot-starter-web:${versions.springBoot}",
+            )
+            override def moduleDeps = super.moduleDeps ++ Seq(api)
+        }
+    }
+
+    object `tapir-sttp-fs2-circe` extends Module {
+        trait CommonModule extends ScalaModule {
+            override def scalaVersion = versions.scala3
+            override def ivyDeps = super.ivyDeps() ++ Agg(
+                ivy"org.typelevel::cats-core::${versions.cats}",
+                ivy"org.typelevel::cats-effect::${versions.catsEffect}",
+                ivy"io.circe::circe-generic::${versions.circe}",
+                ivy"co.fs2::fs2-io::${versions.fs2}",
+            )
+            override def moduleDeps = super.moduleDeps ++ Seq(circe.jvm(versions.scala3))
+        }
+        object api extends CommonModule
+        object consumer extends CommonModule {
+            override def ivyDeps = super.ivyDeps() ++ Agg(
+                ivy"org.http4s::http4s-blaze-server::${versions.http4s}",
+                ivy"org.http4s::http4s-blaze-client::${versions.http4s}",
+                ivy"com.softwaremill.sttp.tapir::tapir-http4s-server::${versions.tapir}",
+                ivy"com.softwaremill.sttp.client3::http4s-backend::${versions.sttp}",
+                ivy"com.softwaremill.sttp.tapir::tapir-cats::${versions.tapir}",
+                ivy"com.softwaremill.sttp.tapir::tapir-json-circe::${versions.tapir}",
+                ivy"ch.qos.logback:logback-classic:${versions.logback}",
+            )
+            override def moduleDeps = super.moduleDeps ++ Seq(api)
+        }
+        object provider extends CommonModule {
+            override def ivyDeps = super.ivyDeps() ++ Agg(
+                ivy"org.http4s::http4s-blaze-server::${versions.http4s}",
+                ivy"com.softwaremill.sttp.tapir::tapir-http4s-server::${versions.tapir}",
+                ivy"com.softwaremill.sttp.tapir::tapir-cats::${versions.tapir}",
+                ivy"com.softwaremill.sttp.tapir::tapir-json-circe::${versions.tapir}",
+                ivy"ch.qos.logback:logback-classic:${versions.logback}",
             )
             override def moduleDeps = super.moduleDeps ++ Seq(api)
         }

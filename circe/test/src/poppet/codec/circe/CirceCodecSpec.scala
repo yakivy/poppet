@@ -9,9 +9,6 @@ import poppet.codec.circe.all._
 
 class CirceCodecSpec extends AnyFreeSpec with CodecSpec {
     "Circe codec should parse" - {
-        "request and response data structures" in {
-            assertExchangeCodec[Json]
-        }
         "custom data structures" in {
             assertCustomCodec[Json, Unit](())
             assertCustomCodec[Json, Int](intExample)

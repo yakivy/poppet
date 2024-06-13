@@ -24,33 +24,13 @@ class ConsumerSpec extends AnyFreeSpec {
         "should delegate calls correctly" in {
             val c = new Consumer[Id, Value, A](
                 request => {
-                    val requestP = read[Request[Value]](request)
-                    val result = read[String](requestP.arguments("p0")) + " response"
-                    writeJs(Response(writeJs(result)))
+                    val result = read[String](request.arguments("p0")) + " response"
+                    Response(writeJs(result))
                 },
-                identity,
                 FailureHandler.throwing,
                 consumerProcessor
             ).service
             assert(c.a("request") == "request response")
-        }
-        "should peek in request to response function" in {
-            val rq = Request[Value]("A", "a", Map("p0" -> "dummy"))
-            val rs = Response[Value]("dummy")
-            var peekRq = Option.empty[Request[Value]]
-            var peekRs = Option.empty[Response[Value]]
-            new Consumer[Id, Value, A](
-                _ => writeJs(rs),
-                f => rq => {
-                    peekRq = Option(rq)
-                    val rs = f(rq)
-                    peekRs = Option(rs)
-                    rs
-                },
-                FailureHandler.throwing,
-                consumerProcessor
-            ).service.a("dummy")
-            assert(peekRq.contains(rq) && peekRs.contains(rs))
         }
     }
 }

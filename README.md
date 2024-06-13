@@ -16,7 +16,6 @@ Essential differences from [autowire](https://github.com/lihaoyi/autowire):
 ### Table of contents
 1. [Quick start](#quick-start)
 1. [Customizations](#customizations)
-    1. [Logging](#logging)
     1. [Failure handling](#failure-handling)
 1. [Manual calls](#manual-calls)
 1. [Limitations](#limitations)
@@ -102,24 +101,12 @@ userService.findById("1")
 
 ### Customizations
 The library is build on following abstractions:
-- `[F[_]]` - is your service HKT, can be any monad (has `cats.Monad` typeclass);
-- `[I]` - is an intermediate data type that your coding framework works with, can be any serialization format, but it would be easier to choose from existed codec modules as they come with a bunch of predefined codecs;
-- `poppet.consumer.Transport` - used to transfer the data between consumer and provider apps, technically it is just a function from `[I]` to `[F[I]]`, so you can use anything as long as it can receive/pass the chosen data type;
-- `poppet.Codec` - used to convert `[I]` to domain models and vice versa. Poppet comes with a bunch of modules, where you will hopefully find a favourite codec. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/poppet/codec/circe/instances/CirceCodecInstances.scala);
-- `poppet.CodecK` - used to convert method return HKT to `[F]` and vice versa. It's needed only if return HKT differs from your service HKT, compilation errors will hint you what codecs are absent;
+- `F[_]` - is your service HKT, can be any monad (has `cats.Monad` typeclass);
+- `I` - is an intermediate data type that your coding framework works with, can be any serialization format, but it would be easier to choose from existed codec modules as they come with a bunch of predefined codecs;
+- `poppet.consumer.Transport` - used to transfer the data between consumer and provider apps, technically it is just a function from `I` to `F[I]`, so you can use anything as long as it can receive/pass the chosen data type;
+- `poppet.Codec` - used to convert `I` to domain models and vice versa. Poppet comes with a bunch of modules, where you will hopefully find a favourite codec. If it is not there, you can always try to write your own by providing 2 basic implicits like [here](https://github.com/yakivy/poppet/blob/master/circe/src/poppet/codec/circe/instances/CirceCodecInstances.scala);
+- `poppet.CodecK` - used to convert method return HKT to `F` and vice versa. It's needed only if return HKT differs from your service HKT, compilation errors will hint you what codecs are absent;
 - `poppet.FailureHandler[F[_]]` - used to handle internal failures, more info you can find [here](#failure-handling);
-- `poppet.Peek[F[_], I]` - used to decorate a function from `Request[I]` to `F[Response[I]]`. Good fit for logging, more info you can find [here](#logging).
-
-#### Logging
-Both provider and consumer take `Peek[F, I]` as an argument, that allows to inject logging logic around the `Request[I] => F[Response[I]]` function. Let's define simple logging peek:
-```scala
-val peek: Peek[Id, Json] = f => request => {
-    println("Request: " + request)
-    val response = f(request)
-    println("Response: " + response)
-    response
-}
-``` 
 
 #### Failure handling
 All meaningful failures that can appear in the library are being transformed into `poppet.Failure`, after what, handled with `poppet.FailureHandler`. Failure handler is a simple polymorphic function from failure to lifted result:
@@ -212,34 +199,38 @@ Provider[..., ...]()
 
 ### Examples
 - run desired example:
-    - Http4s with Circe: https://github.com/yakivy/poppet/tree/master/example/http4s
-        - run provider: `./mill example.http4s.provider.run`
-        - run consumer: `./mill example.http4s.consumer.run`
+    - Http4s with Circe: https://github.com/yakivy/poppet/tree/master/example/http4s-circe
+        - run provider: `./mill example.http4s-circe.provider.run`
+        - run consumer: `./mill example.http4s-circe.consumer.run`
     - Play Framework with Play Json: https://github.com/yakivy/poppet/tree/master/example/play
         - run provider: `./mill example.play.provider.run`
         - run consumer: `./mill example.play.consumer.run`
         - remove `RUNNING_PID` file manually if services are conflicting with each other
-    - And even Spring Framework with Jackson 😲: https://github.com/yakivy/poppet/tree/master/example/spring
-        - run provider: `./mill example.spring.provider.run`
-        - run consumer: `./mill example.spring.consumer.run`
+    - And even Spring Framework with Jackson 😲: https://github.com/yakivy/poppet/tree/master/example/spring-jackson
+        - run provider: `./mill example.spring-jackson.provider.run`
+        - run consumer: `./mill example.spring-jackson.consumer.run`
+    - Tapir with Sttp with FS2 with Circe (supports streaming): https://github.com/yakivy/poppet/tree/master/example/tapir-sttp-fs2-circe
+      - run provider: `./mill example.tapir-sttp-fs2-circe.provider.run`
+      - run consumer: `./mill example.tapir-sttp-fs2-circe.consumer.run`
 - put `http://localhost:9002/api/user/1` in the address bar
+- put `http://localhost:9002/api/user` in the address bar if transport supports streaming
 
 ### Roadmap
-- simplify transport and provider response, use Request => Response instead of I (remove Peek?)
 - add action (including argument name) to codec
 - throw an exception on duplicated service processor
 - separate `.service[S]` and `.service[G[_], S]` to simplify codec resolution
-- don't create ObjectMapper in the lib, use implicit one
 - check that passed class is a trait and doesn't have arguments to prevent obscure error from compiler
 - check that all abstract methods are public
 
 ### Changelog
+#### 0.4.x:
+- simplify transport and provider response
+- remove peek
+- remove ObjectMapper creation from Jackson codec, ask for it implicitly
 
 #### 0.3.x:
 - fix compilation errors for methods with varargs
-- fix several compilation errors for Scala 3
 - fix codec resolution for id (`I => I`) codecs
-- reset `DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES` jackson object mapping property to default value to close [DoS vulnerability](https://github.com/FasterXML/jackson-module-scala/issues/609)
 - add Scala 3 support
 
 #### 0.2.x:

@@ -9,9 +9,6 @@ import poppet.codec.play.all._
 
 class PlayJsonCodecSpec extends AnyFreeSpec with CodecSpec {
     "Play codec should parse" - {
-        "request and response data structures" in {
-            assertExchangeCodec[JsValue]
-        }
         "custom data structures" in {
             implicit val F = Json.format[A]
             assertCustomCodec[JsValue, Unit](())
