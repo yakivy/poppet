@@ -29,7 +29,7 @@ Put cats and poppet dependencies in the build file, let's assume you are using S
 val version = new {
     val cats = "2.10.0"
     val circe = "0.14.6"
-    val poppet = "0.3.5"
+    val poppet = "0.4.0"
 }
 
 libraryDependencies ++= Seq(
